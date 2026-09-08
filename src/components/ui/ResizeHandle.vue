@@ -38,15 +38,5 @@ onBeforeUnmount(() => cleanup?.())
 </script>
 
 <template>
-  <div class="resize-handle" :class="axis" role="separator" tabindex="0" :aria-label="label" :aria-orientation="axis === 'horizontal' ? 'vertical' : 'horizontal'" :aria-valuemin="min" :aria-valuemax="max" :aria-valuenow="modelValue" @pointerdown="start" @keydown="keyboard" />
+  <div class="relative z-4 shrink-0 touch-none bg-line after:absolute after:transition-colors after:duration-150 hover:after:bg-accent/25 focus-visible:after:bg-accent/25" :class="axis === 'horizontal' ? 'h-full w-px cursor-col-resize after:inset-y-0 after:-inset-x-[3px]' : 'h-px w-full cursor-row-resize after:inset-x-0 after:-inset-y-[3px]'" role="separator" tabindex="0" :aria-label="label" :aria-orientation="axis === 'horizontal' ? 'vertical' : 'horizontal'" :aria-valuemin="min" :aria-valuemax="max" :aria-valuenow="modelValue" @pointerdown="start" @keydown="keyboard" />
 </template>
-
-<style scoped>
-.resize-handle { position: relative; z-index: 4; flex-shrink: 0; background: var(--border); touch-action: none; }
-.horizontal { width: 1px; height: 100%; cursor: col-resize; }
-.vertical { height: 1px; width: 100%; cursor: row-resize; }
-.resize-handle::after { content: ''; position: absolute; transition: background 150ms; }
-.horizontal::after { inset: 0 -3px; }
-.vertical::after { inset: -3px 0; }
-.resize-handle:hover::after, .resize-handle:focus-visible::after { background: color-mix(in srgb, var(--accent) 25%, transparent); }
-</style>

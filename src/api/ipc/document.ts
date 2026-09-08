@@ -1,29 +1,77 @@
 import { get, set } from 'idb-keyval'
 import type { DocumentRecord } from '@/types/document'
 
-type ParsedDocument = Pick<DocumentRecord, 'content' | 'text'> & Partial<Pick<DocumentRecord, 'pages' | 'originalContent'>>
+type ParsedDocument = Pick<DocumentRecord, 'content' | 'text'> &
+  Partial<Pick<DocumentRecord, 'pages' | 'originalContent'>>
 interface ImportProvider {
   kind: DocumentRecord['kind']
   read: (file: File) => Promise<ParsedDocument>
   binary: boolean
 }
 
-const markdown: ImportProvider = { kind: 'markdown', binary: false, read: async file => { const content = await file.text(); return { content, text: content } } }
-const pdf: ImportProvider = { kind: 'pdf', binary: true, read: async file => (await import('@/modules/pdf/services/pdf')).inspectPdf(await file.arrayBuffer()) }
-const word: ImportProvider = { kind: 'word', binary: true, read: async file => (await import('@/modules/word/services/word')).importWord(await file.arrayBuffer()) }
-const providers: Record<string, ImportProvider> = { md: markdown, markdown, pdf, docx: word }
+const markdown: ImportProvider = {
+  kind: 'markdown',
+  binary: false,
+  read: async file => {
+    const content = await file.text()
+    return { content, text: content }
+  },
+}
+const pdf: ImportProvider = {
+  kind: 'pdf',
+  binary: true,
+  read: async file =>
+    (await import('@/modules/pdf/services/pdf')).inspectPdf(
+      await file.arrayBuffer()
+    ),
+}
+const word: ImportProvider = {
+  kind: 'word',
+  binary: true,
+  read: async file =>
+    (await import('@/modules/word/services/word')).importWord(
+      await file.arrayBuffer()
+    ),
+}
+const providers: Record<string, ImportProvider> = {
+  md: markdown,
+  markdown,
+  pdf,
+  docx: word,
+}
 
 export const documentApi = {
   async open(file: File): Promise<DocumentRecord> {
     const extension = file.name.split('.').at(-1)?.toLowerCase() ?? ''
     const provider = providers[extension]
-    if (!provider) throw new Error(extension === 'doc' ? '旧版 .doc 需要先通过 Word 转存为 .docx，当前文档引擎支持 .docx。' : '支持 Markdown、PDF 和 DOCX 文档。')
-    if (file.size > 50 * 1024 * 1024) throw new Error('当前版本支持导入 50 MB 以内的文档。')
+    if (!provider)
+      throw new Error(
+        extension === 'doc'
+          ? '旧版 .doc 需要先通过 Word 转存为 .docx，当前文档引擎支持 .docx。'
+          : '支持 Markdown、PDF 和 DOCX 文档。'
+      )
+    if (file.size > 50 * 1024 * 1024)
+      throw new Error('当前版本支持导入 50 MB 以内的文档。')
     const parsed = await provider.read(file)
     const id = crypto.randomUUID()
     if (provider.binary) await set(`miraihub:asset:${id}`, file)
     const now = new Date().toISOString()
-    return { ...parsed, id, name: file.name, kind: provider.kind, path: `导入文件 / ${file.name}`, source: 'local', createdAt: now, modifiedAt: new Date(file.lastModified).toISOString(), openedAt: now, tags: [], favorite: false, dirty: false, size: file.size, ...(provider.binary ? { assetId: id } : {}) }
+    return {
+      ...parsed,
+      id,
+      name: file.name,
+      kind: provider.kind,
+      path: `导入文件 / ${file.name}`,
+      source: 'local',
+      createdAt: now,
+      modifiedAt: new Date(file.lastModified).toISOString(),
+      openedAt: now,
+      tags: [],
+      favorite: false,
+      dirty: false,
+      size: file.size,
+      ...(provider.binary ? { assetId: id } : {}),
+    }
   },
   async binary(assetId: string): Promise<Blob> {
     const file = await get<Blob>(`miraihub:asset:${assetId}`)

@@ -12,23 +12,55 @@ interface Settings {
   autoSave: boolean
 }
 
-const defaults: Settings = { theme: 'system', sidebarWidth: 240, sidebarCollapsed: false, inspectorWidth: 280, aiWidth: 320, editorFontSize: 14, autoSave: true }
+const defaults: Settings = {
+  theme: 'system',
+  sidebarWidth: 240,
+  sidebarCollapsed: false,
+  inspectorWidth: 280,
+  aiWidth: 320,
+  editorFontSize: 14,
+  autoSave: true,
+}
 function valid(value: unknown): value is Settings {
-  return isObject(value) && ['system', 'light', 'dark'].includes(String(value.theme)) && typeof value.sidebarCollapsed === 'boolean' && typeof value.autoSave === 'boolean'
-    && typeof value.sidebarWidth === 'number' && value.sidebarWidth >= 180 && value.sidebarWidth <= 420
-    && typeof value.inspectorWidth === 'number' && value.inspectorWidth >= 220 && value.inspectorWidth <= 420
-    && typeof value.aiWidth === 'number' && value.aiWidth >= 280 && value.aiWidth <= 480
-    && typeof value.editorFontSize === 'number' && value.editorFontSize >= 12 && value.editorFontSize <= 20
+  return (
+    isObject(value) &&
+    ['system', 'light', 'dark'].includes(String(value.theme)) &&
+    typeof value.sidebarCollapsed === 'boolean' &&
+    typeof value.autoSave === 'boolean' &&
+    typeof value.sidebarWidth === 'number' &&
+    value.sidebarWidth >= 180 &&
+    value.sidebarWidth <= 420 &&
+    typeof value.inspectorWidth === 'number' &&
+    value.inspectorWidth >= 220 &&
+    value.inspectorWidth <= 420 &&
+    typeof value.aiWidth === 'number' &&
+    value.aiWidth >= 280 &&
+    value.aiWidth <= 480 &&
+    typeof value.editorFontSize === 'number' &&
+    value.editorFontSize >= 12 &&
+    value.editorFontSize <= 20
+  )
 }
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = reactive(loadJson('settings', defaults, valid))
-  const sidebarSize = computed(() => settings.sidebarCollapsed ? 56 : settings.sidebarWidth)
+  const sidebarSize = computed(() =>
+    settings.sidebarCollapsed ? 56 : settings.sidebarWidth
+  )
   const system = window.matchMedia('(prefers-color-scheme: dark)')
   function applyTheme() {
-    document.documentElement.dataset.theme = settings.theme === 'system' ? (system.matches ? 'dark' : 'light') : settings.theme
+    document.documentElement.dataset.theme =
+      settings.theme === 'system'
+        ? system.matches
+          ? 'dark'
+          : 'light'
+        : settings.theme
   }
   system.addEventListener('change', applyTheme)
   watch(() => settings.theme, applyTheme, { immediate: true })
-  return { settings, sidebarSize, persist: () => persistJson('settings', settings) }
+  return {
+    settings,
+    sidebarSize,
+    persist: () => persistJson('settings', settings),
+  }
 })

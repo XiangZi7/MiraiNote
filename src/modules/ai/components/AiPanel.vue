@@ -37,15 +37,26 @@ const suggestions = [
   },
 ]
 async function submit() {
-  const document = current.value, tab = workspace.activeTab
+  const document = current.value,
+    tab = workspace.activeTab
   const instruction = prompt.value.trim()
   if (!instruction || !document || !tab) return
   try {
-    request.value = { prompt: instruction, context: await captureAgentContext(document, tab, workspace.activePane.id) }
+    request.value = {
+      prompt: instruction,
+      context: await captureAgentContext(
+        document,
+        tab,
+        workspace.activePane.id
+      ),
+    }
     submitted.value = instruction
     prompt.value = ''
   } catch (error) {
-    overlays.toast(error instanceof Error ? error.message : '无法读取文档上下文', true)
+    overlays.toast(
+      error instanceof Error ? error.message : '无法读取文档上下文',
+      true
+    )
   }
 }
 function editRequest() {
@@ -158,7 +169,9 @@ function editRequest() {
           </div>
           <div>
             <dt class="text-muted">内容长度</dt>
-            <dd class="mt-1">{{ request?.context.document.text.length ?? 0 }} 字符</dd>
+            <dd class="mt-1">
+              {{ request?.context.document.text.length ?? 0 }} 字符
+            </dd>
           </div>
         </dl>
         <p class="text-muted mt-6 text-xs leading-6">

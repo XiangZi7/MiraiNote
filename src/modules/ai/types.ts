@@ -1,6 +1,7 @@
 import type { DocumentKind } from '@/types/document'
 
-export type AgentStatus = 'idle' | 'running' | 'approval' | 'completed' | 'cancelled' | 'failed'
+export type AgentStatus =
+  'idle' | 'running' | 'approval' | 'completed' | 'cancelled' | 'failed'
 export interface AgentContext {
   workspaceId: string
   paneId: string

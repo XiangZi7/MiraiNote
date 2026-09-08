@@ -14,9 +14,13 @@ export async function inspectPdf(data: ArrayBuffer) {
     for (let number = 1; number <= pdf.numPages; number++) {
       const page = await pdf.getPage(number)
       const content = await page.getTextContent()
-      pages.push(content.items.map(item => 'str' in item ? item.str : '').join(' '))
+      pages.push(
+        content.items.map(item => ('str' in item ? item.str : '')).join(' ')
+      )
       page.cleanup()
     }
     return { content: '', text: pages.join('\n\n'), pages: pdf.numPages }
-  } finally { await task.destroy() }
+  } finally {
+    await task.destroy()
+  }
 }

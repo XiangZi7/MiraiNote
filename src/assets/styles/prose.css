@@ -1,24 +1,118 @@
-.document-prose { font-size: 14px; line-height: 1.9; color: var(--secondary); overflow-wrap: anywhere; }
-.document-prose h1, .document-prose h2, .document-prose h3, .document-prose h4 { color: var(--text); font-weight: 600; line-height: 1.5; }
-.document-prose h1 { font-size: 26px; margin: 0 0 20px; letter-spacing: -.6px; }
-.document-prose h2 { font-size: 20px; margin: 22px 0 10px; }
-.document-prose h3 { font-size: 16px; margin: 18px 0 8px; }
-.document-prose p { margin: 8px 0 16px; }
-.document-prose ul, .document-prose ol { margin: 8px 0 18px; padding-left: 30px; }
-.document-prose ul { list-style: disc; }
-.document-prose ol { list-style: decimal; }
-.document-prose li { padding-left: 1px; color: var(--text); }
-.document-prose li p { margin: 0; }
-.document-prose a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-.document-prose blockquote { margin: 18px 0; padding: 6px 16px; border-left: 3px solid var(--faint); color: var(--muted); background: var(--bg); }
-.document-prose blockquote p { margin: 4px 0; }
-.document-prose pre { padding: 14px 16px; margin: 20px 0; border-radius: 8px; background: var(--inspector); font: 13px/1.8 var(--font-mono); overflow: auto; }
-.document-prose pre::before { content: attr(data-language); display: block; color: var(--muted); font: 12px/1.5 var(--font-ui); margin-bottom: 8px; }
-.document-prose code { font-family: var(--font-mono); font-size: .92em; }
-.document-prose :not(pre) > code { background: var(--hover); padding: 2px 5px; border-radius: 4px; }
-.document-prose hr { margin: 28px 0; border: 0; border-top: 1px solid var(--border); }
-.document-prose table { border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 13px; }
-.document-prose th, .document-prose td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
-.document-prose th { background: var(--inspector); font-weight: 500; color: var(--text); }
-.document-prose img { max-width: 100%; border-radius: 6px; }
-.document-prose .document-subtitle { color: var(--muted); font-size: 13px; margin-bottom: 30px; }
+.document-prose {
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--secondary);
+  overflow-wrap: anywhere;
+}
+.document-prose h1,
+.document-prose h2,
+.document-prose h3,
+.document-prose h4 {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.document-prose h1 {
+  font-size: 26px;
+  margin: 0 0 20px;
+  letter-spacing: -0.6px;
+}
+.document-prose h2 {
+  font-size: 20px;
+  margin: 22px 0 10px;
+}
+.document-prose h3 {
+  font-size: 16px;
+  margin: 18px 0 8px;
+}
+.document-prose p {
+  margin: 8px 0 16px;
+}
+.document-prose ul,
+.document-prose ol {
+  margin: 8px 0 18px;
+  padding-left: 30px;
+}
+.document-prose ul {
+  list-style: disc;
+}
+.document-prose ol {
+  list-style: decimal;
+}
+.document-prose li {
+  padding-left: 1px;
+  color: var(--text);
+}
+.document-prose li p {
+  margin: 0;
+}
+.document-prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.document-prose blockquote {
+  margin: 18px 0;
+  padding: 6px 16px;
+  border-left: 3px solid var(--faint);
+  color: var(--muted);
+  background: var(--bg);
+}
+.document-prose blockquote p {
+  margin: 4px 0;
+}
+.document-prose pre {
+  padding: 14px 16px;
+  margin: 20px 0;
+  border-radius: 8px;
+  background: var(--inspector);
+  font: 13px/1.8 var(--font-mono);
+  overflow: auto;
+}
+.document-prose pre::before {
+  content: attr(data-language);
+  display: block;
+  color: var(--muted);
+  font: 12px/1.5 var(--font-ui);
+  margin-bottom: 8px;
+}
+.document-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+.document-prose :not(pre) > code {
+  background: var(--hover);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.document-prose hr {
+  margin: 28px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.document-prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 20px 0;
+  font-size: 13px;
+}
+.document-prose th,
+.document-prose td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+.document-prose th {
+  background: var(--inspector);
+  font-weight: 500;
+  color: var(--text);
+}
+.document-prose img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.document-prose .document-subtitle {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 30px;
+}

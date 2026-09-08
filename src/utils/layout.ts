@@ -4,10 +4,20 @@ export function panesOf(node: LayoutNode): PaneNode[] {
   return node.type === 'pane' ? [node] : node.children.flatMap(panesOf)
 }
 
-export function replaceNode(root: LayoutNode, id: string, replacement: LayoutNode): LayoutNode {
+export function replaceNode(
+  root: LayoutNode,
+  id: string,
+  replacement: LayoutNode
+): LayoutNode {
   if (root.id === id) return replacement
   if (root.type === 'pane') return root
-  return { ...root, children: [replaceNode(root.children[0], id, replacement), replaceNode(root.children[1], id, replacement)] }
+  return {
+    ...root,
+    children: [
+      replaceNode(root.children[0], id, replacement),
+      replaceNode(root.children[1], id, replacement),
+    ],
+  }
 }
 
 export function compactLayout(node: LayoutNode): LayoutNode {

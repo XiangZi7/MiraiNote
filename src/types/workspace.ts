@@ -17,7 +17,8 @@ export interface SplitNode {
 
 export type LayoutNode = PaneNode | SplitNode
 export type DropEdge = 'left' | 'right' | 'top' | 'bottom' | 'center'
-export type LibraryFilter = 'all' | 'recent' | 'favorites' | 'markdown' | 'pdf' | 'word'
+export type LibraryFilter =
+  'all' | 'recent' | 'favorites' | 'markdown' | 'pdf' | 'word'
 
 export interface MenuItem {
   label: string

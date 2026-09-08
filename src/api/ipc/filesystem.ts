@@ -5,7 +5,10 @@ export function downloadFile(name: string, content: string, type: string) {
 export function downloadBlob(name: string, blob: Blob) {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
-  anchor.href = url; anchor.download = name
-  document.body.appendChild(anchor); anchor.click(); anchor.remove()
+  anchor.href = url
+  anchor.download = name
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

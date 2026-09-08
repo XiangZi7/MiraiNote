@@ -1,6 +1,10 @@
 const prefix = 'miraihub-docs:v1:'
 
-export function loadJson<T>(key: string, fallback: T, validate: (value: unknown) => value is T): T {
+export function loadJson<T>(
+  key: string,
+  fallback: T,
+  validate: (value: unknown) => value is T
+): T {
   try {
     const raw = localStorage.getItem(prefix + key)
     if (!raw) return fallback

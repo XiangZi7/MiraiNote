@@ -6,30 +6,83 @@ const content = computed(() => examplePages[props.page - 1] ?? examplePages[0]!)
 </script>
 
 <template>
-  <article class="pdf-page">
-    <div class="pdf-brand">MIRAIHUB <span>DESIGN GUIDELINES</span></div>
-    <div class="pdf-eyebrow">{{ content.subtitle }}</div>
-    <h1>{{ content.title }}</h1>
-    <div class="pdf-rule" />
-    <p>{{ content.body }}</p>
-    <div v-if="page === 1" class="design-figure" aria-label="文档布局示意"><div class="figure-sidebar"><i /><i /><i /><i /></div><div class="figure-content"><b /><i /><i /><i /><div><span /><span /></div></div></div>
-    <div v-else-if="page === 3" class="swatches"><div v-for="color in ['#edf0f4', '#dfe4eb', '#818b99', '#566170', '#282e36']" :key="color" :style="{ background: color }" /></div>
-    <h2>{{ content.section }}</h2>
-    <div class="pdf-points"><div v-for="(point, index) in content.points" :key="point"><span>0{{ index + 1 }}</span>{{ point }}</div></div>
-    <div class="pdf-footer"><span>MiraiHub Docs · 设计规范</span><span>{{ String(page).padStart(2, '0') }}</span></div>
+  <article
+    class="relative h-[842px] w-[595px] overflow-hidden bg-white px-[52px] py-[55px] font-sans text-[#303845]"
+  >
+    <div class="text-[13px] font-semibold tracking-[2px]">
+      MIRAIHUB
+      <span class="ml-4 text-[9px] font-normal tracking-[1.2px] text-[#99a1ad]"
+        >DESIGN GUIDELINES</span
+      >
+    </div>
+    <div class="mt-[70px] text-xs tracking-[1px] text-[#84909f]">
+      {{ content.subtitle }}
+    </div>
+    <h1
+      class="mt-3.5 mb-7 max-w-[390px] text-[31px] leading-[1.6] font-semibold tracking-[-1px]"
+    >
+      {{ content.title }}
+    </h1>
+    <div class="mb-6 h-0.5 w-[38px] bg-[#607c9c]" />
+    <p class="mb-[30px] text-[13px] leading-loose text-[#687483]">
+      {{ content.body }}
+    </p>
+    <div
+      v-if="page === 1"
+      class="my-[25px] flex h-[122px] rounded-[5px] border border-[#e6eaf0] bg-[#f7f8fa] p-2.5"
+      aria-label="文档布局示意"
+    >
+      <div class="w-20 rounded-[3px] bg-[#e8edf3] px-2.5 py-[15px]">
+        <i
+          v-for="n in 4"
+          :key="n"
+          class="mb-3 block h-1 w-[35px] rounded-sm bg-[#c9d2de]"
+        />
+      </div>
+      <div class="flex-1 px-5 py-2">
+        <b class="mb-2.5 block h-1.5 w-[85px] rounded-sm bg-[#97a9bf]" /><i
+          v-for="n in 3"
+          :key="n"
+          class="mb-[7px] block h-[3px] w-full bg-[#dfe5ed]"
+        />
+        <div class="mt-3 flex gap-2.5">
+          <span
+            v-for="n in 2"
+            :key="n"
+            class="block h-[30px] flex-1 rounded-[3px] bg-[#e8edf3]"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      v-else-if="page === 3"
+      class="my-[35px] flex h-[90px] overflow-hidden rounded"
+    >
+      <div
+        v-for="color in ['#edf0f4', '#dfe4eb', '#818b99', '#566170', '#282e36']"
+        :key="color"
+        class="flex-1"
+        :style="{ background: color }"
+      />
+    </div>
+    <h2 class="mt-7 mb-[18px] text-[15px] font-semibold">
+      {{ content.section }}
+    </h2>
+    <div class="grid gap-[13px] text-xs text-[#667382]">
+      <div
+        v-for="(point, index) in content.points"
+        :key="point"
+      >
+        <span class="mr-[18px] text-[10px] text-[#a4aebb]"
+          >0{{ index + 1 }}</span
+        >{{ point }}
+      </div>
+    </div>
+    <div
+      class="absolute right-[52px] bottom-[35px] left-[52px] flex justify-between border-t border-[#e8ecf1] pt-[15px] text-[10px] text-[#99a3b0]"
+    >
+      <span>MiraiHub Docs · 设计规范</span
+      ><span>{{ String(page).padStart(2, '0') }}</span>
+    </div>
   </article>
 </template>
-
-<style scoped>
-.pdf-page { width: 595px; height: 842px; padding: 55px 52px; background: white; color: #303845; position: relative; font-family: var(--font-ui); overflow: hidden; }
-.pdf-brand { font-size: 13px; font-weight: 600; letter-spacing: 2px; }.pdf-brand span { font-size: 9px; font-weight: 400; color: #99a1ad; letter-spacing: 1.2px; margin-left: 16px; }
-.pdf-eyebrow { color: #84909f; margin-top: 70px; font-size: 12px; letter-spacing: 1px; }
-h1 { font-size: 31px; line-height: 1.6; font-weight: 600; letter-spacing: -1px; margin: 14px 0 28px; max-width: 390px; }
-.pdf-rule { width: 38px; height: 2px; background: #607c9c; margin-bottom: 24px; }
-p { font-size: 13px; line-height: 2; color: #687483; margin: 0 0 30px; }
-h2 { font-size: 15px; font-weight: 600; margin: 28px 0 18px; }
-.pdf-points { display: grid; gap: 13px; font-size: 12px; color: #667382; }.pdf-points span { font-size: 10px; color: #a4aebb; margin-right: 18px; }
-.pdf-footer { position: absolute; left: 52px; right: 52px; bottom: 35px; display: flex; justify-content: space-between; font-size: 10px; color: #99a3b0; border-top: 1px solid #e8ecf1; padding-top: 15px; }
-.design-figure { height: 122px; background: #f7f8fa; border: 1px solid #e6eaf0; border-radius: 5px; display: flex; padding: 10px; margin: 25px 0; }.figure-sidebar { width: 80px; background: #e8edf3; border-radius: 3px; padding: 15px 10px; }.figure-sidebar i { display: block; height: 4px; background: #c9d2de; width: 35px; margin-bottom: 12px; border-radius: 2px; }.figure-content { flex: 1; padding: 8px 20px; }.figure-content b { display: block; width: 85px; height: 6px; background: #97a9bf; margin-bottom: 10px; border-radius: 2px; }.figure-content i { display: block; width: 100%; height: 3px; background: #dfe5ed; margin-bottom: 7px; }.figure-content > div { display: flex; gap: 10px; margin-top: 12px; }.figure-content span { display: block; height: 30px; flex: 1; background: #e8edf3; border-radius: 3px; }
-.swatches { display: flex; margin: 35px 0; height: 90px; border-radius: 4px; overflow: hidden; }.swatches > div { flex: 1; }
-</style>

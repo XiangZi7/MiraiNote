@@ -1,0 +1,1 @@
+export { windowApi } from './window'

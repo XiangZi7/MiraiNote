@@ -68,7 +68,7 @@ export function createEditor(parent: HTMLElement, content: string, onChange: (co
       '.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '26px', overflow: 'auto' },
       '.cm-content': { padding: '24px 28px 100px 12px', caretColor: 'var(--text)' },
       '.cm-line': { padding: '0 0 0 8px' },
-      '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--faint)', border: 'none', padding: '24px 4px 0 22px', fontSize: '12px' },
+      '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--faint)', border: 'none', padding: '0 4px 0 22px', fontSize: '12px' },
       '.cm-gutterElement': { minWidth: '23px' },
       '.cm-activeLine': { backgroundColor: 'transparent' },
       '.cm-cursor': { borderLeftColor: 'var(--text)' },

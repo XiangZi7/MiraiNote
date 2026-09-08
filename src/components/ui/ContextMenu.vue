@@ -25,7 +25,7 @@ function keyboard(event: KeyboardEvent) {
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); buttons[(index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus() }
   if (event.key === 'Escape' || event.key === 'Tab') { event.preventDefault(); emit('close') }
 }
-onMounted(async () => { await nextTick(); const rect = menu.value?.getBoundingClientRect(); if (rect) { state.left = Math.max(8, Math.min(props.x, window.innerWidth - rect.width - 8)); state.top = Math.max(8, Math.min(props.y, window.innerHeight - rect.height - 8)) }; menu.value?.querySelector('button:not(:disabled)')?.focus() })
+onMounted(async () => { await nextTick(); const rect = menu.value?.getBoundingClientRect(); if (rect) { state.left = Math.max(8, Math.min(props.x, window.innerWidth - rect.width - 8)); state.top = Math.max(8, Math.min(props.y, window.innerHeight - rect.height - 8)) }; menu.value?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus() })
 onBeforeUnmount(() => previous?.isConnected && previous.focus())
 </script>
 

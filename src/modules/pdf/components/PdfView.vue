@@ -6,6 +6,7 @@ import { useOverlaysStore } from '@/stores/overlays'
 import IconButton from '@/components/ui/IconButton.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import PdfPage from './PdfPage.vue'
+import PdfFileView from './PdfFileView.vue'
 import { examplePages } from '../services/example-pages'
 import type { DocumentRecord, DocumentTab } from '@/types/document'
 const props = defineProps<{ document: DocumentRecord; tab: DocumentTab }>()
@@ -37,7 +38,8 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
 </script>
 
 <template>
-  <div ref="root" class="pdf-view flex h-full flex-col bg-canvas">
+  <PdfFileView v-if="document.assetId" :document="document" :tab="tab" />
+  <div v-else ref="root" class="pdf-view flex h-full flex-col bg-canvas">
     <AppToolbar label="PDF 工具栏">
       <IconButton icon="lucide:panel-left" label="切换页面导航" :active="navigation !== 'hidden'" @click="navigation = navigation === 'hidden' ? 'thumbnails' : 'hidden'" />
       <ToolbarSeparator /><IconButton icon="lucide:chevron-left" label="上一页" :disabled="tab.position.page <= 1" @click="go(tab.position.page - 1)" />

@@ -8,7 +8,7 @@ export function useCommands(): MenuItem[] {
   const actions = useDocumentActions(), workspace = useWorkspaceStore(), settings = useSettingsStore(), overlays = useOverlaysStore()
   return [
     { label: '新建 Markdown', icon: 'lucide:file-plus-2', shortcut: 'Ctrl N', action: actions.create },
-    { label: '打开 Markdown 文件', icon: 'lucide:folder-open', shortcut: 'Ctrl O', action: actions.openFiles },
+    { label: '打开文档', icon: 'lucide:folder-open', shortcut: 'Ctrl O', action: actions.openFiles },
     { label: '搜索文档', icon: 'lucide:search', shortcut: 'Ctrl K', action: () => { overlays.state.palette = 'search' } },
     { label: '保存工作区草稿', icon: 'lucide:save', shortcut: 'Ctrl S', action: actions.save },
     { label: '导出文档 / 另存为', icon: 'lucide:share', shortcut: 'Ctrl ⇧ S', action: actions.exportDocument },

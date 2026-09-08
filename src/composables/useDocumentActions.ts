@@ -1,7 +1,9 @@
 import { useDocumentsStore } from '@/stores/documents'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useOverlaysStore } from '@/stores/overlays'
-import { chooseMarkdownFiles, readMarkdownFile, downloadFile } from '@/api/ipc/filesystem'
+import { useFileDialog } from '@vueuse/core'
+import { downloadFile, downloadBlob } from '@/api/ipc/filesystem'
+import { documentApi } from '@/api/ipc/document'
 import type { MenuItem } from '@/types/workspace'
 import type { DocumentRecord } from '@/types/document'
 
@@ -9,23 +11,26 @@ export function useDocumentActions() {
   const documents = useDocumentsStore()
   const workspace = useWorkspaceStore()
   const overlays = useOverlaysStore()
+  const fileDialog = useFileDialog({ accept: '.md,.markdown,.pdf,.docx', multiple: true, reset: true })
+  fileDialog.onChange(files => { if (files) void importFiles(Array.from(files)) })
   function create() { workspace.open(documents.create().id) }
   async function importFiles(files: File[]) {
     for (const file of files) {
-      try { const doc = await readMarkdownFile(file); documents.documents.push(doc); workspace.open(doc.id) }
+      try { const doc = await documentApi.open(file); documents.documents.push(doc); workspace.open(doc.id) }
       catch (error) { overlays.toast(error instanceof Error ? error.message : '无法读取文件', true) }
     }
   }
-  async function openFiles() { await importFiles(await chooseMarkdownFiles()) }
+  function openFiles() { fileDialog.open() }
   function save() {
     const doc = workspace.currentDocument
     if (!doc) return
     try { documents.save(doc.id) } catch { overlays.toast('本地存储空间不足，草稿保存失败。请导出文件。', true) }
   }
-  function exportDocument() {
+  async function exportDocument() {
     const doc = workspace.currentDocument
     if (!doc) return
-    if (doc.kind === 'pdf') { overlays.toast('这是用于界面验收的 PDF 示例，真实 PDF 导出将在文档引擎阶段接入。'); return }
+    if (doc.assetId && (doc.kind === 'pdf' || (doc.kind === 'word' && doc.content === doc.originalContent))) { downloadBlob(doc.name, await documentApi.binary(doc.assetId)); return }
+    if (doc.kind === 'pdf') { overlays.toast('这是用于界面验收的 PDF 示例。导入的 PDF 可以导出原始文件。'); return }
     downloadFile(doc.kind === 'word' ? doc.name.replace(/\.docx?$/i, '.html') : doc.name, doc.content, doc.kind === 'word' ? 'text/html;charset=utf-8' : 'text/markdown;charset=utf-8')
   }
   function rename(doc: DocumentRecord) {

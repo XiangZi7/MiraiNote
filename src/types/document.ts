@@ -17,6 +17,8 @@ export interface DocumentRecord {
   dirty: boolean
   size: number
   pages?: number
+  assetId?: string
+  originalContent?: string
 }
 
 export interface ReadingPosition {

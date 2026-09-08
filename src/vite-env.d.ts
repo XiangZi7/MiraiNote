@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
-declare module "*.vue" {
-  import type { DefineComponent } from "vue";
-  const component: DefineComponent<{}, {}, any>;
-  export default component;
+declare module 'virtual:mirai-icons' {
+  import type { IconifyJSON } from '@iconify/vue'
+  const icons: IconifyJSON
+  export default icons
 }

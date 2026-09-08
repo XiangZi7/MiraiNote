@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppIcon from './AppIcon.vue'
-defineProps<{ icon: string; label: string; active?: boolean; disabled?: boolean }>()
+withDefaults(defineProps<{ icon: string; label: string; active?: boolean; disabled?: boolean }>(), { active: undefined, disabled: false })
 </script>
 
 <template>

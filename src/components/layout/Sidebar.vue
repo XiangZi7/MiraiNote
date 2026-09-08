@@ -20,7 +20,7 @@ function selector(event: MouseEvent) {
   overlays.menu(event, [
     { label: '示例工作区', icon: 'lucide:check', action: () => { workspace.library = 'all' } },
     { label: '新建 Markdown', icon: 'lucide:file-plus-2', divider: true, shortcut: 'Ctrl N', action: actions.create },
-    { label: '导入 Markdown 文件…', icon: 'lucide:folder-open', action: actions.openFiles },
+    { label: '导入文档…', icon: 'lucide:folder-open', action: actions.openFiles },
   ])
 }
 </script>

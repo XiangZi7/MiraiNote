@@ -21,7 +21,7 @@ async function windowAction(action: () => Promise<void>) {
 function more(event: MouseEvent) {
   overlays.menu(event, [
     { label: '新建 Markdown', icon: 'lucide:file-plus-2', shortcut: 'Ctrl N', action: actions.create },
-    { label: '打开 Markdown 文件…', icon: 'lucide:folder-open', shortcut: 'Ctrl O', action: actions.openFiles },
+    { label: '打开文件…', icon: 'lucide:folder-open', shortcut: 'Ctrl O', action: actions.openFiles },
     { label: '保存工作区草稿', icon: 'lucide:save', shortcut: 'Ctrl S', action: actions.save },
     { label: '文件信息', icon: 'lucide:panel-right', divider: true, action: () => { overlays.state.inspector = !overlays.state.inspector } },
     { label: 'AI 助手', icon: 'lucide:sparkles', action: () => { overlays.state.ai = !overlays.state.ai } },

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mirainote",
+  "productName": "MiraiHub Docs",
   "version": "0.1.0",
   "identifier": "com.admin.mirainote",
   "build": {
@@ -12,9 +12,14 @@
   "app": {
     "windows": [
       {
-        "title": "mirainote",
-        "width": 800,
-        "height": 600
+        "title": "MiraiHub Docs",
+        "width": 1440,
+        "height": 920,
+        "minWidth": 900,
+        "minHeight": 600,
+        "decorations": false,
+        "shadow": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {

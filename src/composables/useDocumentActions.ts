@@ -29,9 +29,12 @@ export function useDocumentActions() {
   async function exportDocument() {
     const doc = workspace.currentDocument
     if (!doc) return
-    if (doc.assetId && (doc.kind === 'pdf' || (doc.kind === 'word' && doc.content === doc.originalContent))) { downloadBlob(doc.name, await documentApi.binary(doc.assetId)); return }
-    if (doc.kind === 'pdf') { overlays.toast('这是用于界面验收的 PDF 示例。导入的 PDF 可以导出原始文件。'); return }
-    downloadFile(doc.kind === 'word' ? doc.name.replace(/\.docx?$/i, '.html') : doc.name, doc.content, doc.kind === 'word' ? 'text/html;charset=utf-8' : 'text/markdown;charset=utf-8')
+    try {
+      if (doc.assetId && (doc.kind === 'pdf' || (doc.kind === 'word' && doc.content === doc.originalContent))) { downloadBlob(doc.name, await documentApi.binary(doc.assetId)); return }
+      if (doc.kind === 'pdf') { overlays.toast('这是用于界面验收的 PDF 示例。导入的 PDF 可以导出原始文件。'); return }
+      downloadFile(doc.kind === 'word' ? doc.name.replace(/\.docx?$/i, '.html') : doc.name, doc.content, doc.kind === 'word' ? 'text/html;charset=utf-8' : 'text/markdown;charset=utf-8')
+      if (doc.kind === 'word') overlays.toast('已导出 HTML 格式的编辑稿')
+    } catch (error) { overlays.toast(error instanceof Error ? error.message : '文档导出失败', true) }
   }
   function rename(doc: DocumentRecord) {
     overlays.state.prompt = { title: '重命名文档', label: '文件名', value: doc.name, confirm: '重命名', danger: false, action: value => {

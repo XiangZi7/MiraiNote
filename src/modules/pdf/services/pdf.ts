@@ -10,8 +10,13 @@ export async function inspectPdf(data: ArrayBuffer) {
   const task = loadPdf(data)
   try {
     const pdf = await task.promise
-    const page = await pdf.getPage(1)
-    const content = await page.getTextContent()
-    return { content: '', text: content.items.map(item => 'str' in item ? item.str : '').join(' '), pages: pdf.numPages }
+    const pages: string[] = []
+    for (let number = 1; number <= pdf.numPages; number++) {
+      const page = await pdf.getPage(number)
+      const content = await page.getTextContent()
+      pages.push(content.items.map(item => 'str' in item ? item.str : '').join(' '))
+      page.cleanup()
+    }
+    return { content: '', text: pages.join('\n\n'), pages: pdf.numPages }
   } finally { await task.destroy() }
 }

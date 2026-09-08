@@ -12,7 +12,7 @@ function validDocuments(value: unknown): value is DocumentRecord[] {
     && ['markdown', 'pdf', 'word'].includes(String(item.kind)) && ['example', 'local'].includes(String(item.source))
     && typeof item.content === 'string' && typeof item.text === 'string' && typeof item.size === 'number'
     && typeof item.dirty === 'boolean' && typeof item.favorite === 'boolean'
-    && ['createdAt', 'modifiedAt', 'openedAt'].every(key => typeof item[key] === 'string')
+    && ['createdAt', 'modifiedAt', 'openedAt'].every(key => typeof item[key] === 'string' && Number.isFinite(Date.parse(item[key] as string)))
     && Array.isArray(item.tags) && item.tags.every(tag => typeof tag === 'string'))
 }
 

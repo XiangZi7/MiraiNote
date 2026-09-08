@@ -5,11 +5,14 @@ import { useSettingsStore } from '@/stores/settings'
 import { useOverlaysStore } from '@/stores/overlays'
 import { documentTypes } from '@/utils/documents'
 import { AppIcon, IconButton, AppButton } from '@/components/ui'
+import { captureAgentContext } from '../services/context'
+import type { AgentRequest } from '../types'
 const workspace = useWorkspaceStore(),
   settings = useSettingsStore(),
   overlays = useOverlaysStore()
 const prompt = shallowRef('')
 const submitted = shallowRef('')
+const request = shallowRef<AgentRequest>()
 const current = computed(() => workspace.currentDocument)
 const suggestions = [
   {
@@ -33,10 +36,21 @@ const suggestions = [
     prompt: '请将当前文档翻译为英文，保留标题和段落结构。',
   },
 ]
-function submit() {
-  if (!prompt.value.trim() || !current.value) return
-  submitted.value = prompt.value.trim()
-  prompt.value = ''
+async function submit() {
+  const document = current.value, tab = workspace.activeTab
+  const instruction = prompt.value.trim()
+  if (!instruction || !document || !tab) return
+  try {
+    request.value = { prompt: instruction, context: await captureAgentContext(document, tab, workspace.activePane.id) }
+    submitted.value = instruction
+    prompt.value = ''
+  } catch (error) {
+    overlays.toast(error instanceof Error ? error.message : '无法读取文档上下文', true)
+  }
+}
+function editRequest() {
+  prompt.value = submitted.value
+  submitted.value = ''
 }
 </script>
 
@@ -140,11 +154,11 @@ function submit() {
         <dl class="mt-5 space-y-3 text-xs">
           <div>
             <dt class="text-muted">文档上下文</dt>
-            <dd class="mt-1">{{ current?.name }}</dd>
+            <dd class="mt-1">{{ request?.context.document.name }}</dd>
           </div>
           <div>
             <dt class="text-muted">内容长度</dt>
-            <dd class="mt-1">{{ current?.text.length ?? 0 }} 字符</dd>
+            <dd class="mt-1">{{ request?.context.document.text.length ?? 0 }} 字符</dd>
           </div>
         </dl>
         <p class="text-muted mt-6 text-xs leading-6">
@@ -153,10 +167,7 @@ function submit() {
         <AppButton
           variant="ghost"
           class="mt-3 -ml-3"
-          @click="
-            prompt = submitted
-            submitted = ''
-          "
+          @click="editRequest"
           >继续编辑请求</AppButton
         ></template
       >

@@ -11,17 +11,21 @@ export function useWorkspaceLifecycle() {
   const actions = useDocumentActions()
   let stopped = false
   let storageError = false
+  let persisting = false
   function persist() {
+    persisting = true
     try {
       if (settings.settings.autoSave) for (const doc of documents.documents) if (doc.dirty) documents.save(doc.id, true)
       documents.persist(); workspace.persist(); settings.persist(); storageError = false
     } catch {
       if (!storageError) overlays.toast('工作区保存失败，请导出正在编辑的文档。', true)
       storageError = true
+    } finally {
+      persisting = false
     }
   }
   const schedule = useDebounceFn(() => { if (!stopped) persist() }, 650, { maxWait: 3000 })
-  const stop = watch([() => documents.documents, () => workspace.root, () => settings.settings], () => { void schedule() }, { deep: true })
+  const stop = watch([() => documents.documents, () => workspace.root, () => settings.settings], () => { if (!persisting) void schedule() }, { deep: true, flush: 'sync' })
   function keydown(event: KeyboardEvent) {
     if (!(event.ctrlKey || event.metaKey) || event.altKey) return
     const key = event.key.toLowerCase()

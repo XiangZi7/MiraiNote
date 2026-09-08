@@ -7,6 +7,7 @@ import { useDocumentActions } from '@/composables/useDocumentActions'
 import { windowApi } from '@/api/ipc'
 import { documentTypes } from '@/utils/documents'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AppLogo from '@/components/ui/AppLogo.vue'
 import IconButton from '@/components/ui/IconButton.vue'
 
 const workspace = useWorkspaceStore()
@@ -99,12 +100,21 @@ function more(event: MouseEvent) {
             !settings.settings.sidebarCollapsed
         "
       />
-      <span
+      <div
         v-if="!settings.settings.sidebarCollapsed"
+        class="flex min-w-0 items-center gap-2"
         data-tauri-drag-region
-        >MiraiHub
-        <span class="brand-docs text-muted ml-0.5 font-normal">Docs</span></span
       >
+        <AppLogo
+          :size="22"
+          data-tauri-drag-region
+        />
+        <span
+          class="truncate"
+          data-tauri-drag-region
+          >MiraiNote</span
+        >
+      </div>
     </div>
     <div
       class="header-center [&>svg]:text-secondary flex h-full min-w-0 flex-1 items-center justify-center gap-2 pl-[95px] font-medium max-[1050px]:pl-0 [&>span]:truncate"
@@ -117,7 +127,7 @@ function more(event: MouseEvent) {
       <span data-tauri-drag-region>{{
         workspace.library
           ? '文档工作区'
-          : (workspace.currentDocument?.name ?? 'MiraiHub Docs')
+          : (workspace.currentDocument?.name ?? 'MiraiNote')
       }}</span>
       <span
         v-if="workspace.currentDocument?.dirty && !workspace.library"

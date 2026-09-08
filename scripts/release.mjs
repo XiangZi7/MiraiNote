@@ -184,7 +184,7 @@ export function releaseProject(
       if (git(root, "status", "--porcelain=v1", "--untracked-files=normal"))
         throw new Error("提交后仍有文件改动，请检查 Git hooks 的执行结果");
       syncReleaseVersion(root, tag, { check: true });
-      git(root, "tag", "-a", tag, "-m", `MiraiHub ${tag}`);
+      git(root, "tag", "-a", tag, "-m", `MiraiNote ${tag}`);
     } catch (error) {
       throw new Error(
         `${error.message}\n发版准备中断，尚未推送；已保留本地改动，请检查 git status 和 git log。`,

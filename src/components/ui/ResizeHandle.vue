@@ -21,6 +21,7 @@ function start(event: PointerEvent) {
   if (event.button !== 0) return
   event.preventDefault()
   const handle = event.currentTarget as HTMLElement
+  handle.focus()
   handle.setPointerCapture(event.pointerId)
   const startPoint = props.axis === 'horizontal' ? event.clientX : event.clientY
   const initial = props.modelValue

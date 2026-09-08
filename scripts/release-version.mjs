@@ -37,14 +37,14 @@ function packageSection(source, lockfile) {
     ),
   ];
   const matches = sections.filter((section) =>
-    /^name\s*=\s*"miraihub"\s*$/m.test(section[0]),
+    /^name\s*=\s*"mirainote"\s*$/m.test(section[0]),
   );
   if (matches.length !== 1)
-    throw new Error("Rust 配置必须包含唯一的 miraihub package");
+    throw new Error("Rust 配置必须包含唯一的 mirainote package");
   const section = matches[0];
   const versions = [...section[0].matchAll(/^version\s*=\s*"([^"]+)"/gm)];
   if (versions.length !== 1)
-    throw new Error("miraihub package 必须包含唯一的版本号");
+    throw new Error("mirainote package 必须包含唯一的版本号");
   return { section, version: versions[0][1] };
 }
 

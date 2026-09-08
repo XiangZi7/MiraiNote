@@ -13,8 +13,8 @@ try {
     if ($Commit -cnotmatch '\A[0-9a-f]{40}\z') { throw 'Commit must be a full Git SHA.' }
     $version = $Tag.Substring(1)
     $buildDir = Join-Path $projectDir 'src-tauri/target/release'
-    $appExe = Join-Path $buildDir 'miraihub.exe'
-    $installer = Join-Path $buildDir "bundle/nsis/MiraiHub_${version}_x64-setup.exe"
+    $appExe = Join-Path $buildDir 'mirainote.exe'
+    $installer = Join-Path $buildDir "bundle/nsis/MiraiNote_${version}_x64-setup.exe"
     foreach ($file in @($appExe, $installer)) {
         if (!(Test-Path -LiteralPath $file -PathType Leaf) -or (Get-Item -LiteralPath $file).Length -eq 0) {
             throw "Missing build output: $file"
@@ -29,14 +29,14 @@ try {
         throw 'release-output already exists. Move it away before packaging a new release.'
     }
     New-Item -ItemType Directory -Path $outputDir | Out-Null
-    $setupName = "MiraiHub_${version}_windows_x64_setup.exe"
-    $zipName = "MiraiHub_${version}_windows_x64_portable.zip"
+    $setupName = "MiraiNote_${version}_windows_x64_setup.exe"
+    $zipName = "MiraiNote_${version}_windows_x64_portable.zip"
     Copy-Item -LiteralPath $installer -Destination (Join-Path $outputDir $setupName)
 
     # Only the executable is archived; never include local connection data, keys or source files.
     Compress-Archive -LiteralPath $appExe -DestinationPath (Join-Path $outputDir $zipName) -CompressionLevel Optimal
     $manifest = [ordered]@{
-        name = 'MiraiHub'
+        name = 'MiraiNote'
         version = $version
         tag = $Tag
         commit = $Commit

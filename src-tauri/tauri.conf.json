@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MiraiHub Docs",
+  "productName": "MiraiNote",
   "version": "0.1.0",
   "identifier": "com.admin.mirainote",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "MiraiHub Docs",
+        "title": "MiraiNote",
         "width": 1440,
         "height": 920,
         "minWidth": 900,

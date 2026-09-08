@@ -19,6 +19,7 @@ export interface DocumentRecord {
   pages?: number
   assetId?: string
   originalContent?: string
+  lastPosition?: ReadingPosition
 }
 
 export interface ReadingPosition {
@@ -29,6 +30,7 @@ export interface ReadingPosition {
   page: number
   zoom: number
   rotation: number
+  pdfOffset?: number
 }
 
 export interface DocumentTab {

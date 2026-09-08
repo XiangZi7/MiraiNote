@@ -122,8 +122,11 @@ function findNext() {
   )
   target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
 }
-onMounted(() => {
+function restoreScroll() {
   if (viewport.value) viewport.value.scrollTop = props.tab.position.scroll
+}
+onMounted(() => {
+  restoreScroll()
   window.addEventListener('mirai:find', find)
 })
 onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
@@ -178,6 +181,7 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
       <DocxPreview
         v-if="originalPreview && document.assetId"
         :asset-id="document.assetId"
+        @ready="restoreScroll"
         :style="{ zoom: tab.position.zoom / 100 }"
       />
       <div
@@ -188,7 +192,7 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
         <div
           class="paper-heading border-line text-muted mb-5 flex justify-between border-b pb-[25px] text-[9px] tracking-[1.3px]"
         >
-          <span>MIRAIHUB DOCS</span><span>产品 / 规划</span>
+          <span>MiraiNote</span><span>Word 文档</span>
         </div>
         <EditorContent
           :editor="editor"
@@ -197,7 +201,7 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
         <div
           class="paper-footer border-line text-muted mt-7 flex justify-between border-t pt-3.5 text-[10px]"
         >
-          产品规划与设计方案<span>01</span>
+          {{ document.name }}<span>01</span>
         </div>
       </div>
     </div>

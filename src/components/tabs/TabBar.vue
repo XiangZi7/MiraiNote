@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { computed } from 'vue'
+import { useTabDrag } from '@/composables/useTabDrag'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useDocumentsStore } from '@/stores/documents'
 import { useOverlaysStore } from '@/stores/overlays'
@@ -15,39 +16,16 @@ const workspace = useWorkspaceStore()
 const documents = useDocumentsStore()
 const overlays = useOverlaysStore()
 const actions = useDocumentActions()
-const dropIndex = shallowRef<number | null>(null)
-function endDrag() {
-  workspace.drag = null
-  dropIndex.value = null
-}
+const pointerDrag = useTabDrag(() => props.pane)
+const indicatorIndex = computed(() =>
+  workspace.dropTarget?.paneId === props.pane.id &&
+  'index' in workspace.dropTarget
+    ? workspace.dropTarget.index
+    : null
+)
 function createDocument() {
   workspace.activate(props.pane.id)
   actions.create()
-}
-function start(event: DragEvent, tab: DocumentTab) {
-  if (!event.dataTransfer) return
-  workspace.drag = { paneId: props.pane.id, tabId: tab.id }
-  event.dataTransfer.effectAllowed = 'move'
-  event.dataTransfer.setData('application/x-mirai-tab', tab.id)
-}
-function over(event: DragEvent, index: number) {
-  if (!workspace.drag) return
-  event.preventDefault()
-  event.stopPropagation()
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  dropIndex.value = index + (event.clientX > rect.x + rect.width / 2 ? 1 : 0)
-}
-function drop(event: DragEvent) {
-  if (!workspace.drag) return
-  event.preventDefault()
-  event.stopPropagation()
-  workspace.moveTab(
-    workspace.drag.paneId,
-    workspace.drag.tabId,
-    props.pane.id,
-    dropIndex.value ?? props.pane.tabs.length
-  )
-  dropIndex.value = null
 }
 function menu(event: MouseEvent, tab: DocumentTab) {
   const pane = props.pane
@@ -127,9 +105,6 @@ function menu(event: MouseEvent, tab: DocumentTab) {
 <template>
   <div
     class="tab-bar border-line bg-canvas flex h-9 shrink-0 items-center gap-[3px] border-b px-2 select-none"
-    @dragover.prevent
-    @drop="drop"
-    @dragleave="dropIndex = null"
   >
     <div
       class="tab-list flex h-full max-w-[calc(100%-32px)] [scrollbar-width:none] overflow-x-auto"
@@ -139,27 +114,28 @@ function menu(event: MouseEvent, tab: DocumentTab) {
       <div
         v-for="(tab, index) in pane.tabs"
         :key="tab.id"
-        class="tab group text-muted hover:bg-hover [&.active]:bg-surface [&.active]:text-primary [&.drop-before]:before:bg-accent [&.drop-after]:after:bg-accent relative flex h-full max-w-[210px] min-w-[100px] cursor-default items-center gap-2 border-r border-transparent px-2.5 text-xs [&.drop-after]:after:absolute [&.drop-after]:after:inset-y-[5px] [&.drop-after]:after:right-0 [&.drop-after]:after:w-0.5 [&.drop-before]:before:absolute [&.drop-before]:before:inset-y-[5px] [&.drop-before]:before:left-0 [&.drop-before]:before:w-0.5"
+        class="tab group text-muted hover:bg-hover [&.active]:bg-surface [&.active]:text-primary [&.drop-before]:before:bg-accent [&.drop-after]:after:bg-accent relative flex h-full max-w-[210px] min-w-[100px] cursor-default touch-none items-center gap-2 border-r border-transparent px-2.5 text-xs [&.drop-after]:after:absolute [&.drop-after]:after:inset-y-[5px] [&.drop-after]:after:right-0 [&.drop-after]:after:w-0.5 [&.drop-before]:before:absolute [&.drop-before]:before:inset-y-[5px] [&.drop-before]:before:left-0 [&.drop-before]:before:w-0.5"
         :class="{
           active: pane.activeTabId === tab.id,
-          'drop-before': dropIndex === index,
+          'drop-before': indicatorIndex === index,
           'drop-after':
-            dropIndex === pane.tabs.length && index === pane.tabs.length - 1,
+            indicatorIndex === pane.tabs.length &&
+            index === pane.tabs.length - 1,
+          'opacity-50': workspace.drag?.tabId === tab.id,
         }"
         role="tab"
+        :data-tab-id="tab.id"
         :aria-selected="pane.activeTabId === tab.id"
         :tabindex="pane.activeTabId === tab.id ? 0 : -1"
-        draggable="true"
+        :draggable="false"
         :title="documents.get(tab.documentId)?.path"
-        @click="workspace.activate(pane.id, tab.id)"
+        @pointerdown="pointerDrag.start($event, tab.id)"
+        @click="pointerDrag.activate(tab.id)"
         @keydown.enter="workspace.activate(pane.id, tab.id)"
         @keydown.left.prevent="workspace.cycle(true)"
         @keydown.right.prevent="workspace.cycle()"
         @auxclick.middle.prevent="workspace.close(pane.id, tab.id)"
         @contextmenu.prevent.stop="menu($event, tab)"
-        @dragstart="start($event, tab)"
-        @dragend="endDrag"
-        @dragover="over($event, index)"
       >
         <AppIcon
           :name="

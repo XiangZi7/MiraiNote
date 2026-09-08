@@ -1,7 +1,7 @@
 export const examplePages = [
   {
     title: '设计，让专注自然发生。',
-    subtitle: 'MiraiHub Docs 设计规范',
+    subtitle: 'MiraiNote 设计规范',
     section: '设计理念',
     body: '以文档为核心，让每一份思考都拥有恰如其分的空间。我们相信，好的工具应当安静地融入工作，让内容成为真正的主角。',
     points: [

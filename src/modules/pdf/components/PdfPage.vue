@@ -10,7 +10,7 @@ const content = computed(() => examplePages[props.page - 1] ?? examplePages[0]!)
     class="relative h-[842px] w-[595px] overflow-hidden bg-white px-[52px] py-[55px] font-sans text-[#303845]"
   >
     <div class="text-[13px] font-semibold tracking-[2px]">
-      MIRAIHUB
+      MiraiNote
       <span class="ml-4 text-[9px] font-normal tracking-[1.2px] text-[#99a1ad]"
         >DESIGN GUIDELINES</span
       >
@@ -81,7 +81,7 @@ const content = computed(() => examplePages[props.page - 1] ?? examplePages[0]!)
     <div
       class="absolute right-[52px] bottom-[35px] left-[52px] flex justify-between border-t border-[#e8ecf1] pt-[15px] text-[10px] text-[#99a3b0]"
     >
-      <span>MiraiHub Docs · 设计规范</span
+      <span>MiraiNote · 设计规范</span
       ><span>{{ String(page).padStart(2, '0') }}</span>
     </div>
   </article>

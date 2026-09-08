@@ -3,19 +3,22 @@ import { onMounted, onBeforeUnmount, shallowRef, useTemplateRef } from 'vue'
 import { renderAsync } from 'docx-preview'
 import { documentApi } from '@/api/ipc/document'
 const props = defineProps<{ assetId: string }>()
+const emit = defineEmits<{ ready: [] }>()
 const container = useTemplateRef('container')
 const error = shallowRef('')
 let disposed = false
 onMounted(async () => {
   try {
     const blob = await documentApi.binary(props.assetId)
-    if (!disposed && container.value)
+    if (!disposed && container.value) {
       await renderAsync(blob, container.value, undefined, {
         className: 'docx-page',
         inWrapper: false,
         ignoreLastRenderedPageBreak: false,
         useBase64URL: true,
       })
+      if (!disposed) emit('ready')
+    }
   } catch (reason) {
     if (!disposed)
       error.value =

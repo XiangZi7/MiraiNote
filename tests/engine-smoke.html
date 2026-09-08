@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" />
+  <title>文档引擎集成验收</title>
+  <body>
+    <h1>文档引擎集成验收</h1>
+    <p>仅使用 tests/fixtures 中的合成文档，不读取个人文件。</p>
+    <button id="run">运行验收</button>
+    <pre id="results" role="status"></pre>
+    <div id="preview"></div>
+    <script type="module">
+      import { documentApi } from '/src/api/ipc/document.ts'
+      import { renderMarkdown } from '/src/modules/markdown/services/render.ts'
+      import { renderAsync } from 'docx-preview'
+      import { del } from 'idb-keyval'
+      const output = document.querySelector('#results')
+      const assets = []
+      async function read(name) {
+        const response = await fetch(`/tests/fixtures/${name}`)
+        if (!response.ok) throw new Error(`Fixture ${response.status}`)
+        const file = new File([await response.blob()], name)
+        const record = await documentApi.open(file)
+        if (record.assetId) assets.push(record.assetId)
+        return record
+      }
+      function check(condition, label) {
+        if (!condition) throw new Error(label)
+        output.textContent += `PASS ${label}\n`
+      }
+      document.querySelector('#run').onclick = async () => {
+        output.textContent = ''
+        try {
+          const md = await read('markdown-smoke.md')
+          check(md.kind === 'markdown' && md.content.includes('Task list'), 'Markdown 导入正文')
+          check(renderMarkdown(md.content).includes('<table>'), 'Markdown 表格解析')
+          check(!renderMarkdown('[x](javascript:alert(1))').includes('href="javascript:'), 'Markdown 危险链接清理')
+          const pdf = await read('reader-smoke.pdf')
+          check(pdf.pages === 2 && pdf.text.includes('Searchable second page'), 'PDF 全文和页数解析')
+          check((await documentApi.binary(pdf.assetId)).size === pdf.size, 'PDF 原始二进制持久化')
+          const word = await read('word-smoke.docx')
+          check(word.kind === 'word' && word.content.includes('<strong>Editable bold text</strong>'), 'DOCX 格式解析')
+          check(word.text.includes('preserves DOCX'), 'DOCX 全文提取')
+          await renderAsync(await documentApi.binary(word.assetId), document.querySelector('#preview'))
+          check(document.querySelector('#preview').textContent.includes('Word import verification'), 'DOCX 原始排版渲染')
+          output.textContent += '完成：8 项检查通过。'
+        } catch (error) {
+          output.textContent += `FAIL ${error.stack || error.message}`
+        } finally {
+          await Promise.all(assets.splice(0).map(id => del(`miraihub:asset:${id}`)))
+        }
+      }
+    </script>
+  </body>
+</html>

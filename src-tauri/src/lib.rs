@@ -4,7 +4,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .run(tauri::generate_context!())
     {
-        eprintln!("MiraiHub Docs could not start: {error}");
+        eprintln!("MiraiNote could not start: {error}");
         std::process::exit(1);
     }
 }

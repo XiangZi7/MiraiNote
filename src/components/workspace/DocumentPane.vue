@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { AppButton } from '@/components/ui'
-import { computed, defineAsyncComponent, shallowRef } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocumentActions } from '@/composables/useDocumentActions'
 import TabBar from '@/components/tabs/TabBar.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import type { DropEdge, PaneNode } from '@/types/workspace'
+import type { PaneNode } from '@/types/workspace'
 import type { DocumentKind } from '@/types/document'
 
 const props = defineProps<{ pane: PaneNode }>()
@@ -28,36 +28,12 @@ const renderers = {
     () => import('@/modules/word/components/WordView.vue')
   ),
 } satisfies Record<DocumentKind, unknown>
-const edge = shallowRef<DropEdge | null>(null)
-function dragOver(event: DragEvent) {
-  if (!workspace.drag) return
-  event.preventDefault()
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  const x = (event.clientX - rect.left) / rect.width
-  const y = (event.clientY - rect.top) / rect.height
-  edge.value =
-    x < 0.22
-      ? 'left'
-      : x > 0.78
-        ? 'right'
-        : y < 0.22
-          ? 'top'
-          : y > 0.78
-            ? 'bottom'
-            : 'center'
-}
-function drop(event: DragEvent) {
-  if (!workspace.drag) return
-  event.preventDefault()
-  event.stopPropagation()
-  workspace.splitTab(
-    workspace.drag.paneId,
-    workspace.drag.tabId,
-    props.pane.id,
-    edge.value ?? 'center'
-  )
-  edge.value = null
-}
+const dropEdge = computed(() =>
+  workspace.dropTarget?.paneId === props.pane.id &&
+  'edge' in workspace.dropTarget
+    ? workspace.dropTarget.edge
+    : null
+)
 </script>
 
 <template>
@@ -65,15 +41,11 @@ function drop(event: DragEvent) {
     class="document-pane bg-surface flex size-full min-h-0 min-w-0 flex-col"
     :class="{ focused: workspace.activePaneId === pane.id }"
     aria-label="文档面板"
+    :data-pane-id="pane.id"
     @pointerdown.capture="workspace.activePaneId = pane.id"
   >
     <TabBar :pane="pane" />
-    <div
-      class="pane-content relative min-h-0 flex-1"
-      @dragover="dragOver"
-      @drop="drop"
-      @dragleave.self="edge = null"
-    >
+    <div class="pane-content relative min-h-0 flex-1">
       <component
         :is="renderers[doc.kind]"
         v-if="doc && tab"
@@ -100,11 +72,13 @@ function drop(event: DragEvent) {
         >
       </div>
       <div
-        v-if="edge && workspace.drag"
+        v-if="dropEdge && workspace.drag"
         class="drop-zone border-accent bg-accent/15 [&>span]:bg-elevated [&>span]:text-accent [&>span]:shadow-floating pointer-events-none absolute inset-[5px] z-15 grid place-items-center rounded-md border [&.bottom]:top-1/2 [&.left]:right-1/2 [&.right]:left-1/2 [&.top]:bottom-1/2 [&>span]:rounded-md [&>span]:px-3 [&>span]:py-1.5"
-        :class="edge"
+        :class="dropEdge"
       >
-        <span>{{ edge === 'center' ? '移动到此面板' : '松开以分屏打开' }}</span>
+        <span>{{
+          dropEdge === 'center' ? '移动到此面板' : '松开以分屏打开'
+        }}</span>
       </div>
     </div>
   </section>

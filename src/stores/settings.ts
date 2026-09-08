@@ -8,6 +8,7 @@ interface Settings {
   sidebarCollapsed: boolean
   inspectorWidth: number
   aiWidth: number
+  pdfSidebarWidth: number
   editorFontSize: number
   autoSave: boolean
 }
@@ -18,6 +19,7 @@ const defaults: Settings = {
   sidebarCollapsed: false,
   inspectorWidth: 280,
   aiWidth: 320,
+  pdfSidebarWidth: 146,
   editorFontSize: 14,
   autoSave: true,
 }
@@ -36,6 +38,10 @@ function valid(value: unknown): value is Settings {
     typeof value.aiWidth === 'number' &&
     value.aiWidth >= 280 &&
     value.aiWidth <= 480 &&
+    (value.pdfSidebarWidth === undefined ||
+      (typeof value.pdfSidebarWidth === 'number' &&
+        value.pdfSidebarWidth >= 120 &&
+        value.pdfSidebarWidth <= 360)) &&
     typeof value.editorFontSize === 'number' &&
     value.editorFontSize >= 12 &&
     value.editorFontSize <= 20
@@ -43,7 +49,10 @@ function valid(value: unknown): value is Settings {
 }
 
 export const useSettingsStore = defineStore('settings', () => {
-  const settings = reactive(loadJson('settings', defaults, valid))
+  const settings = reactive({
+    ...defaults,
+    ...loadJson('settings', defaults, valid),
+  })
   const sidebarSize = computed(() =>
     settings.sidebarCollapsed ? 56 : settings.sidebarWidth
   )

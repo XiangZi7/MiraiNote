@@ -41,7 +41,12 @@ export function useWorkspaceLifecycle() {
     { maxWait: 3000 }
   )
   const stop = watch(
-    [() => documents.documents, () => workspace.root, () => settings.settings],
+    [
+      () => documents.documents,
+      () => workspace.root,
+      () => workspace.activePaneId,
+      () => settings.settings,
+    ],
     () => {
       if (!persisting) void schedule()
     },

@@ -4,6 +4,7 @@ import { useDocumentsStore } from './documents'
 import { compactLayout, emptyPane, panesOf, replaceNode } from '@/utils/layout'
 import { isObject, loadJson, persistJson } from '@/utils/storage'
 import { defaultPosition } from '@/types/document'
+import { validReadingPosition } from '@/utils/reading-position'
 import type { DocumentTab } from '@/types/document'
 import type {
   DropEdge,
@@ -35,12 +36,7 @@ function validLayout(value: unknown, depth = 0): value is LayoutNode {
         typeof tab.id === 'string' &&
         typeof tab.documentId === 'string' &&
         typeof tab.pinned === 'boolean' &&
-        isObject(tab.position) &&
-        ['edit', 'preview', 'split'].includes(String(tab.position.mode)) &&
-        ['ratio', 'cursor', 'scroll', 'page', 'zoom', 'rotation'].every(
-          key =>
-            typeof (tab.position as Record<string, unknown>)[key] === 'number'
-        )
+        validReadingPosition(tab.position)
     ) &&
     (value.activeTabId === null || typeof value.activeTabId === 'string')
   )
@@ -66,9 +62,22 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       pane.activeTabId = pane.tabs[0]?.id ?? null
   }
   root.value = compactLayout(root.value)
-  const activePaneId = shallowRef(panesOf(root.value)[0]!.id)
+  const activePaneId = shallowRef(
+    loadJson(
+      'active-pane',
+      panesOf(root.value)[0]!.id,
+      (value): value is string =>
+        typeof value === 'string' &&
+        panesOf(root.value).some(pane => pane.id === value)
+    )
+  )
   const library = shallowRef<LibraryFilter | null>(null)
   const drag = shallowRef<{ paneId: string; tabId: string } | null>(null)
+  const dropTarget = shallowRef<
+    | { paneId: string; index: number }
+    | { paneId: string; edge: DropEdge }
+    | null
+  >(null)
   const closedTabs = ref<DocumentTab[]>([])
   const panes = computed(() => panesOf(root.value))
   const activePane = computed(
@@ -101,7 +110,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         id: crypto.randomUUID(),
         documentId,
         pinned: false,
-        position: defaultPosition(),
+        position: validReadingPosition(doc.lastPosition)
+          ? { ...doc.lastPosition }
+          : defaultPosition(),
       }
       pane.tabs.push(tab)
     }
@@ -127,6 +138,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (!pane) return
     const tab = detach(pane, tabId)
     if (tab) {
+      const doc = documents.get(tab.documentId)
+      if (doc) doc.lastPosition = { ...tab.position }
       closedTabs.value.push(tab)
       closedTabs.value = closedTabs.value.slice(-30)
     }
@@ -257,6 +270,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     currentDocument,
     library,
     drag,
+    dropTarget,
     closedTabs,
     activate,
     open,
@@ -267,6 +281,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     togglePin,
     cycle,
     removeDocument,
-    persist: () => persistJson('layout', root.value),
+    persist: () => {
+      persistJson('layout', root.value)
+      persistJson('active-pane', activePaneId.value)
+    },
   }
 })

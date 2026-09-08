@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useSettingsStore } from '@/stores/settings'
 import { useOverlaysStore } from '@/stores/overlays'
-import { AppIcon, SegmentedControl } from '@/components/ui'
+import { AppIcon, AppLogo, SegmentedControl } from '@/components/ui'
 import AppDialog from '@/components/ui/AppDialog.vue'
 const settings = useSettingsStore(),
   overlays = useOverlaysStore()
@@ -63,8 +63,9 @@ const settings = useSettingsStore(),
       </section>
       <section class="border-line border-t pt-5">
         <h3 class="text-muted mb-3 text-xs font-medium">关于</h3>
-        <div class="flex justify-between">
-          <span class="font-medium">MiraiHub Docs</span
+        <div class="flex items-center justify-between">
+          <span class="flex items-center gap-2.5 font-medium"
+            ><AppLogo />MiraiNote</span
           ><span class="text-muted text-xs">0.1.0 · UI 阶段</span>
         </div>
         <p class="text-muted mt-3 text-xs leading-6">

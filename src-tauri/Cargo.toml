@@ -1,7 +1,7 @@
 [package]
 name = "mirainote"
 version = "0.1.0"
-description = "A Tauri App"
+description = "MiraiNote document workspace"
 authors = ["you"]
 edition = "2021"
 

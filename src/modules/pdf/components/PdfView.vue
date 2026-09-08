@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AppToolbar, ToolbarSeparator } from '@/components/ui'
+import { AppToolbar, ToolbarSeparator, ResizeHandle } from '@/components/ui'
 import {
   computed,
   reactive,
@@ -15,11 +15,24 @@ import IconButton from '@/components/ui/IconButton.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import PdfPage from './PdfPage.vue'
 import PdfFileView from './PdfFileView.vue'
+import PdfPagesViewport from './PdfPagesViewport.vue'
+import { useSettingsStore } from '@/stores/settings'
 import { examplePages } from '../services/example-pages'
 import type { DocumentRecord, DocumentTab } from '@/types/document'
 const props = defineProps<{ document: DocumentRecord; tab: DocumentTab }>()
 const workspace = useWorkspaceStore()
 const overlays = useOverlaysStore()
+const settings = useSettingsStore()
+const navigationWidth = computed({
+  get: () => settings.settings.pdfSidebarWidth ?? 146,
+  set: (value: number) => {
+    settings.settings.pdfSidebarWidth = value
+  },
+})
+const pageSizes = examplePages.map(() => ({ width: 595, height: 842 }))
+const thumbnailScale = computed(() =>
+  Math.min((navigationWidth.value - 48) / 595, 320 / 842)
+)
 // 响应式状态
 const state = reactive({
   // 左侧导航方式
@@ -34,7 +47,6 @@ const root = useTemplateRef('root')
 const viewport = useTemplateRef('viewport')
 const searchInput = useTemplateRef('search')
 const scale = computed(() => props.tab.position.zoom / 100)
-const rotated = computed(() => props.tab.position.rotation % 180 !== 0)
 const matches = computed(() =>
   examplePages
     .map((page, index) => ({ page, number: index + 1 }))
@@ -45,23 +57,27 @@ const matches = computed(() =>
     )
 )
 function go(page: number) {
-  props.tab.position.page = Math.max(
-    1,
-    Math.min(examplePages.length, Math.round(page) || 1)
+  void viewport.value?.go(
+    Math.max(1, Math.min(examplePages.length, Math.round(page) || 1))
   )
-  if (viewport.value) viewport.value.scrollTop = 0
+}
+function position(page: number, offset: number) {
+  props.tab.position.page = page
+  props.tab.position.pdfOffset = offset
 }
 function zoom(value: number) {
   props.tab.position.zoom = Math.min(200, Math.max(40, value))
 }
 function fit(page = false) {
-  const el = viewport.value
+  const el = viewport.value?.size()
   if (el)
     zoom(
       Math.floor(
         Math.min(
-          (el.clientWidth - 70) / 595,
-          page ? (el.clientHeight - 52) / 842 : 2
+          (el.width - 64) / (props.tab.position.rotation % 180 ? 842 : 595),
+          page
+            ? (el.height - 52) / (props.tab.position.rotation % 180 ? 595 : 842)
+            : 2
         ) * 100
       )
     )
@@ -190,7 +206,8 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
     <div class="pdf-body flex min-h-0 flex-1">
       <aside
         v-if="navigation !== 'hidden'"
-        class="pdf-navigation border-line bg-inspector w-[156px] shrink-0 overflow-auto border-r"
+        class="pdf-navigation bg-inspector shrink-0 overflow-x-hidden overflow-y-auto"
+        :style="{ width: `${navigationWidth}px` }"
         aria-label="PDF 页面导航"
       >
         <div
@@ -221,9 +238,19 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
             @click="go(item.number)"
           >
             <div
-              class="thumbnail-paper group-[.selected]:border-accent relative h-[147px] w-[104px] border-2 border-transparent shadow-[0_1px_5px_#17203415] [&_.pdf-page]:origin-top-left [&_.pdf-page]:scale-[.168]"
+              class="thumbnail-paper group-[.selected]:border-accent relative border-2 border-transparent shadow-sm"
+              :style="{
+                width: `${595 * thumbnailScale + 4}px`,
+                height: `${842 * thumbnailScale + 4}px`,
+              }"
             >
-              <PdfPage :page="item.number" />
+              <PdfPage
+                :page="item.number"
+                :style="{
+                  transform: `scale(${thumbnailScale})`,
+                  transformOrigin: 'top left',
+                }"
+              />
             </div>
             <span>{{ item.number }}</span>
           </button>
@@ -242,27 +269,32 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
           </button>
         </div>
       </aside>
-      <div
+      <ResizeHandle
+        v-if="navigation !== 'hidden'"
+        v-model="navigationWidth"
+        :min="120"
+        :max="360"
+        label="调整 PDF 缩略图栏宽度"
+      />
+      <PdfPagesViewport
         ref="viewport"
-        class="pdf-viewport bg-sidebar min-w-0 flex-1 overflow-auto px-[35px] py-[26px]"
+        :sizes="pageSizes"
+        :position="tab.position"
+        @position="position"
       >
-        <div
-          class="page-frame relative mx-auto shrink-0 bg-white shadow-[0_2px_12px_#18243718]"
-          :style="{
-            width: `${(rotated ? 842 : 595) * scale}px`,
-            height: `${(rotated ? 595 : 842) * scale}px`,
-          }"
-        >
-          <div
-            class="scaled-page absolute top-1/2 left-1/2 h-[842px] w-[595px] origin-center"
-            :style="{
-              transform: `translate(-50%, -50%) scale(${scale}) rotate(${tab.position.rotation}deg)`,
-            }"
-          >
-            <PdfPage :page="tab.position.page" />
+        <template #default="{ page }">
+          <div class="relative size-full overflow-hidden">
+            <div
+              class="absolute top-1/2 left-1/2 h-[842px] w-[595px] origin-center"
+              :style="{
+                transform: `translate(-50%, -50%) scale(${scale}) rotate(${tab.position.rotation}deg)`,
+              }"
+            >
+              <PdfPage :page="page" />
+            </div>
           </div>
-        </div>
-      </div>
+        </template>
+      </PdfPagesViewport>
     </div>
   </div>
 </template>

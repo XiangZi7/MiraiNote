@@ -11,6 +11,7 @@ import {
 import { useIntersectionObserver } from '@vueuse/core'
 import { TextLayer, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist'
 import '../styles/text-layer.css'
+import type { PdfPageSize } from '../types'
 const props = withDefaults(
   defineProps<{
     pdf: PDFDocumentProxy
@@ -18,13 +19,14 @@ const props = withDefaults(
     scale: number
     rotation?: number
     thumbnail?: boolean
+    size?: PdfPageSize
   }>(),
   { rotation: 0, thumbnail: false }
 )
 const root = useTemplateRef('root'),
   canvas = useTemplateRef('canvas'),
   text = useTemplateRef('text')
-const visible = shallowRef(!props.thumbnail)
+const visible = shallowRef(false)
 // 响应式状态
 const state = reactive({
   // PDF 页面实际宽度
@@ -36,14 +38,24 @@ const state = reactive({
   // PDF 用户单位影响文本层的定位和字号
   unit: 1,
 })
-const { width, height, error } = toRefs(state)
+const { error } = toRefs(state)
+const width = computed(
+  () =>
+    ((props.rotation % 180 ? props.size?.height : props.size?.width) ??
+      state.width / props.scale) * props.scale
+)
+const height = computed(
+  () =>
+    ((props.rotation % 180 ? props.size?.width : props.size?.height) ??
+      state.height / props.scale) * props.scale
+)
 const label = computed(() => `PDF 第 ${props.page} 页`)
 useIntersectionObserver(
   root,
   ([entry]) => {
     visible.value = entry?.isIntersecting ?? false
   },
-  { rootMargin: '120px' }
+  { rootMargin: '300px' }
 )
 let renderTask: RenderTask | undefined
 let textLayer: TextLayer | undefined
@@ -59,9 +71,17 @@ watch(
   ],
   async () => {
     const run = ++version
-    renderTask?.cancel()
+    const previous = renderTask
+    previous?.cancel()
     textLayer?.cancel()
-    if (!visible.value || !canvas.value) return
+    if (previous) await previous.promise.catch(() => undefined)
+    if (run !== version || !canvas.value) return
+    if (!visible.value) {
+      canvas.value.width = 1
+      canvas.value.height = 1
+      text.value?.replaceChildren()
+      return
+    }
     const target = canvas.value
     state.error = ''
     try {
@@ -69,12 +89,15 @@ watch(
       if (run !== version) return
       const viewport = page.getViewport({
         scale: props.scale,
-        rotation: props.rotation,
+        rotation: (page.rotate + props.rotation) % 360,
       })
       state.unit = page.userUnit
       state.width = viewport.width
       state.height = viewport.height
-      const density = window.devicePixelRatio || 1
+      const density = Math.min(
+        window.devicePixelRatio || 1,
+        Math.sqrt(16_000_000 / (viewport.width * viewport.height))
+      )
       target.width = Math.floor(viewport.width * density)
       target.height = Math.floor(viewport.height * density)
       const context = target.getContext('2d')

@@ -1,4 +1,4 @@
-# MiraiHub Docs · 设计与交付基准
+# MiraiNote · 设计与交付基准
 
 视觉来源：用户提供的 `C:/Users/admin/Desktop/markdown.png`（1586 × 992）。文字需求决定行为，截图决定视觉。桌面壁纸及 macOS 红黄绿按钮不属于 Windows 应用内容。
 

@@ -3,7 +3,7 @@ import type { DocumentRecord } from '@/types/document'
 const markdown = `# 产品设计文档
 
 ## 项目介绍
-MiraiHub 是一个面向开发者的桌面工作台。
+MiraiNote 是一个面向开发者的桌面工作台。
 支持服务器连接、文件管理、数据库操作以及 AI Agent。
 
 ### 核心功能
@@ -26,11 +26,11 @@ MiraiHub 是一个面向开发者的桌面工作台。
 
 \`\`\`bash
 # 启动应用
-miraihub
+mirainote
 \`\`\`
 `
 
-const word = `<h1>产品规划与设计方案</h1><p class="document-subtitle">MiraiHub Docs · 产品与体验设计</p><h2>一、项目概述</h2><p>我们希望构建一个简洁、专注的文档工作台，让阅读、思考与创作自然地发生在同一个空间里。</p><p>围绕文档建立连贯的工作方式，以清晰的信息结构和克制的界面语言，帮助用户在复杂的工作中保持专注。</p><h2>二、核心体验</h2><p><strong>文档是核心，功能是辅助。</strong>通过标签页和灵活分屏，在多个文档之间轻松切换、对照与整理。</p><ul><li>统一管理 Markdown、PDF 与 Word 文档</li><li>恢复工作现场，让每一次开始都延续上一次思考</li><li>使用搜索与收藏，快速找到需要的内容</li></ul><h2>三、里程碑</h2><table><thead><tr><th>阶段</th><th>交付内容</th><th>重点</th></tr></thead><tbody><tr><td>设计基础</td><td>设计系统与应用布局</td><td>视觉一致性</td></tr><tr><td>文档体验</td><td>编辑器与阅读器</td><td>内容优先</td></tr><tr><td>工作空间</td><td>搜索、分屏与恢复</td><td>流畅交互</td></tr></tbody></table><h2>四、下一步</h2><p>通过真实的阅读与写作场景持续验证设计，让每一个细节都服务于文档本身。</p>`
+const word = `<h1>产品规划与设计方案</h1><p class="document-subtitle">MiraiNote · 产品与体验设计</p><h2>一、项目概述</h2><p>我们希望构建一个简洁、专注的文档工作台，让阅读、思考与创作自然地发生在同一个空间里。</p><p>围绕文档建立连贯的工作方式，以清晰的信息结构和克制的界面语言，帮助用户在复杂的工作中保持专注。</p><h2>二、核心体验</h2><p><strong>文档是核心，功能是辅助。</strong>通过标签页和灵活分屏，在多个文档之间轻松切换、对照与整理。</p><ul><li>统一管理 Markdown、PDF 与 Word 文档</li><li>恢复工作现场，让每一次开始都延续上一次思考</li><li>使用搜索与收藏，快速找到需要的内容</li></ul><h2>三、里程碑</h2><table><thead><tr><th>阶段</th><th>交付内容</th><th>重点</th></tr></thead><tbody><tr><td>设计基础</td><td>设计系统与应用布局</td><td>视觉一致性</td></tr><tr><td>文档体验</td><td>编辑器与阅读器</td><td>内容优先</td></tr><tr><td>工作空间</td><td>搜索、分屏与恢复</td><td>流畅交互</td></tr></tbody></table><h2>四、下一步</h2><p>通过真实的阅读与写作场景持续验证设计，让每一个细节都服务于文档本身。</p>`
 
 export function exampleDocuments(): DocumentRecord[] {
   const base = {
@@ -60,7 +60,7 @@ export function exampleDocuments(): DocumentRecord[] {
       kind: 'pdf',
       path: '文档 / 设计 / 设计规范.pdf',
       content: '',
-      text: 'MiraiHub 设计规范 设计理念 字体与排版 色彩系统 组件与布局 简洁 高效 专注 优雅',
+      text: 'MiraiNote 设计规范 设计理念 字体与排版 色彩系统 组件与布局 简洁 高效 专注 优雅',
       size: 248320,
       pages: 6,
       tags: ['设计', '规范'],

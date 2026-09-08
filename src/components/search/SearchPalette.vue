@@ -188,7 +188,7 @@ async function keyboard(event: KeyboardEvent) {
           <span><kbd>↑ ↓</kbd> 选择</span
           ><span><kbd>↵</kbd> {{ commandMode ? '执行' : '打开' }}</span
           ><span class="ml-auto">{{
-            commandMode ? 'MiraiHub Docs' : '搜索此工作区的文档'
+            commandMode ? 'MiraiNote' : '搜索此工作区的文档'
           }}</span>
         </div>
       </section>

@@ -8,6 +8,7 @@ export const useOverlaysStore = defineStore('overlays', () => {
     inspector: false,
     ai: false,
     settings: false,
+    settingsSection: 'general' as 'general' | 'ai',
     help: false,
     menu: null as { x: number; y: number; items: MenuItem[] } | null,
     toasts: [] as { id: string; message: string; error: boolean }[],

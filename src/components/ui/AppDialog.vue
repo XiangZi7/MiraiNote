@@ -2,9 +2,13 @@
 import { useId, useTemplateRef } from 'vue'
 import { useFocusTrap } from '@/composables/useFocusTrap'
 import IconButton from './IconButton.vue'
-withDefaults(defineProps<{ title: string; width?: string }>(), {
-  width: '520px',
-})
+withDefaults(
+  defineProps<{ title: string; width?: string; scrollable?: boolean }>(),
+  {
+    width: '520px',
+    scrollable: true,
+  }
+)
 const emit = defineEmits<{ close: [] }>()
 const dialog = useTemplateRef('dialog')
 const titleId = useId()
@@ -23,10 +27,13 @@ useFocusTrap(dialog)
         role="dialog"
         aria-modal="true"
         :aria-labelledby="titleId"
-        class="border-line bg-elevated shadow-floating max-h-[76vh] max-w-full overflow-auto rounded-xl border"
+        class="border-line bg-elevated shadow-floating max-h-[76vh] max-w-full rounded-xl border"
+        :class="scrollable ? 'overflow-auto' : 'flex flex-col overflow-hidden'"
         :style="{ width }"
       >
-        <header class="flex items-center justify-between px-6 pt-5 pb-3.5">
+        <header
+          class="flex shrink-0 items-center justify-between px-6 pt-5 pb-3.5"
+        >
           <h2
             :id="titleId"
             class="text-base font-semibold"

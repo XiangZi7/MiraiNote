@@ -1,5 +1,7 @@
 export { default as AppIcon } from './AppIcon.vue'
 export { default as AppLogo } from './AppLogo.vue'
+export { default as AppSelect } from './AppSelect.vue'
+export { default as AppSwitch } from './AppSwitch.vue'
 export { default as IconButton } from './IconButton.vue'
 export { default as AppButton } from './AppButton.vue'
 export { default as AppToolbar } from './AppToolbar.vue'

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><title>AI 配置集成验收</title>
+  <div id="app"></div>
+  <script type="module">
+    import { mockIPC, mockWindows } from '@tauri-apps/api/mocks'
+    window.isTauri = true
+    const settings = { activeId: '', profiles: [] }
+    window.agentTest = { calls: [], slow: false, fail: false, saved: settings }
+    let resolvePending
+    mockWindows('main')
+    mockIPC(async (command, payload) => {
+      if (!command.startsWith('agent_')) return
+      window.agentTest.calls.push({
+        command,
+        payload: structuredClone(payload),
+      })
+      if (command === 'agent_get_settings') return structuredClone(settings)
+      if (command === 'agent_list_models')
+        return ['fixture-model', 'other-model']
+      if (command === 'agent_test_profile') return '连接成功 · fixture-model'
+      if (command === 'agent_save_profile') {
+        const input = payload.input,
+          id = input.id || crypto.randomUUID()
+        const old = settings.profiles.find(p => p.id === id)
+        const { apiKey, ...config } = input.config
+        const profile = {
+          ...config,
+          id,
+          name: input.name,
+          hasApiKey: !payload.clearKey && (!!apiKey || !!old?.hasApiKey),
+        }
+        settings.profiles = settings.profiles
+          .filter(p => p.id !== id)
+          .concat(profile)
+        settings.activeId = id
+        return structuredClone(settings)
+      }
+      if (command === 'agent_delete_profile') {
+        settings.profiles = settings.profiles.filter(p => p.id !== payload.id)
+        if (settings.activeId === payload.id) settings.activeId = ''
+        return structuredClone(settings)
+      }
+      if (command === 'agent_activate_profile') {
+        settings.activeId = payload.id
+        return structuredClone(settings)
+      }
+      if (command === 'agent_complete') {
+        if (window.agentTest.fail)
+          throw {
+            kind: 'internal',
+            message: '模型服务返回 HTTP 401，请检查密钥',
+          }
+        if (window.agentTest.slow)
+          await new Promise(resolve => {
+            resolvePending = resolve
+          })
+        return {
+          text: '# 文档摘要\n\n这是合成测试响应。',
+          model: 'fixture-model',
+          steps: 1,
+        }
+      }
+      if (command === 'agent_cancel') {
+        resolvePending?.()
+        return
+      }
+    })
+    await import('/src/main.ts')
+  </script>
+</html>

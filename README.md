@@ -26,13 +26,13 @@ cargo check --manifest-path src-tauri/Cargo.toml --locked
 - DOCX：docx-preview 保留原始排版阅读，Mammoth 提取内容，Tiptap 提供基础富文本编辑。
 - 工作区：类型筛选、最近打开、收藏、标签、搜索、命令面板、右键菜单、标签拖动排序和边缘分屏；拖动通过 VueUse 管理指针事件，更新真实 Layout Tree。
 - 外观：浅色 / 深色 / 跟随系统，侧栏、Inspector、AI 面板可调整宽度。
-- AI：当前文档、活动 Pane / Tab、内容版本和发送时快照的请求预览；架构参考 `D:/code/MiraiHub/src-tauri/src/agent`，详见 `docs/agent-integration.md`。
+- AI：设置 → AI Agent 管理多份服务配置；支持 OpenAI 兼容 / Claude Messages、模型列表获取、连接测试、Windows 密钥加密保存、任务容量设置。侧栏可切换模型、分析当前文档、调用只读搜索和标题提取工具、停止任务并复制回答。架构参考 `D:/code/MiraiHub/src-tauri/src/agent`，详见 `docs/agent-integration.md`。
 
 ## 当前阶段边界
 
 这是界面与文档引擎接入阶段，尚未完成需求中的全部 19 个阶段。导入内容保存在此设备的工作区（文本草稿使用 localStorage，PDF / DOCX 原文件副本使用 IndexedDB），当前保存与重命名、移动、移除操作针对工作区记录；Rust 文件系统写回尚未接入。
 
-Markdown 可导出 `.md`；PDF 和未编辑 DOCX 可导出原文件；编辑后的 Word 暂导出 HTML，尚未实现 DOCX 编辑稿回写和旧 `.doc` 格式。Markdown 的 Mermaid / 数学公式、真实 PDF 目录和 AI 模型调用仍待接入。AI 面板明确显示模型未连接，不会返回模拟模型答案。当前单文件导入限制为 50 MB。
+Markdown 可导出 `.md`；PDF 和未编辑 DOCX 可导出原文件；编辑后的 Word 暂导出 HTML，尚未实现 DOCX 编辑稿回写和旧 `.doc` 格式。Markdown 的 Mermaid / 数学公式、真实 PDF 目录仍待接入。AI 在 Windows 桌面端通过用户配置的模型服务调用；浏览器仅预览设置界面。AI 对话当前保留于本次应用内存中，跨重启历史和直接应用编辑建议尚未实现。当前单文件导入限制为 50 MB。
 
 ## 代码边界
 
@@ -46,5 +46,7 @@ Markdown 可导出 `.md`；PDF 和未编辑 DOCX 可导出原文件；编辑后�
 ## 验收
 
 `pnpm test` 检查递归布局、阅读位置校验、连续 PDF 页高和旋转定位、AI 文档快照绑定。运行开发服务后可打开 `http://localhost:1420/tests/engine-smoke.html`，点击“运行验收”检查三类文档导入、PDF 二进制保存、DOCX 原始排版渲染以及 Markdown 危险链接处理。测试仅使用 `tests/fixtures` 中的合成文件。
+
+AI 配置回归测试：先运行 `pnpm exec playwright install chromium`，再运行 `pnpm test:ui`。测试通过 Tauri 官方 mock IPC 验证表单、侧栏、配置隔离和取消；后端用 `cargo test --manifest-path src-tauri/Cargo.toml --locked` 验证真实 HTTP 协议适配。也可用 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` 指定已有 Chromium 路径。
 
 设计基准及阶段顺序见 `docs/design-system.md`。Windows 的窗口吸附、多显示器、安装包和长时间运行仍需桌面专项验收。

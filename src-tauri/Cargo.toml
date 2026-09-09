@@ -1,6 +1,6 @@
 [package]
 name = "mirainote"
-version = "0.1.0"
+version = "0.1.1"
 description = "MiraiNote document workspace"
 authors = ["XiangZi7"]
 homepage = "https://github.com/XiangZi7/MiraiNote"

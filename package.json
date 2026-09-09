@@ -2,6 +2,19 @@
   "name": "mirainote",
   "private": true,
   "version": "0.1.0",
+  "description": "MiraiNote 文档工作台：Markdown、PDF、Word 与 AI 文档助手",
+  "author": "XiangZi7",
+  "homepage": "https://github.com/XiangZi7/MiraiNote",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/XiangZi7/MiraiNote.git"
+  },
+  "bugs": {
+    "url": "https://github.com/XiangZi7/MiraiNote/issues"
+  },
+  "engines": {
+    "node": ">=22.22.2"
+  },
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {

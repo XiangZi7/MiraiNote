@@ -23,6 +23,21 @@ try {
     # Refuse stale binaries from a different version in a local build/cache.
     $binaryVersion = (Get-Item -LiteralPath $appExe).VersionInfo.ProductVersion
     if ($binaryVersion -ne $version) { throw "Binary version $binaryVersion does not match $version" }
+    # Windows x64 assets must actually contain an AMD64 PE executable.
+    $binary = [System.IO.File]::OpenRead($appExe)
+    $reader = [System.IO.BinaryReader]::new($binary)
+    try {
+        if ($reader.ReadUInt16() -ne 0x5A4D) { throw 'Application is not a Windows executable.' }
+        $binary.Position = 0x3C
+        $peOffset = $reader.ReadUInt32()
+        $binary.Position = $peOffset
+        if ($reader.ReadUInt32() -ne 0x4550 -or $reader.ReadUInt16() -ne 0x8664) {
+            throw 'Application must be a Windows x64 executable.'
+        }
+    } finally {
+        $reader.Dispose()
+        $binary.Dispose()
+    }
 
     $outputDir = Join-Path $projectDir 'release-output'
     if (Test-Path -LiteralPath $outputDir) {

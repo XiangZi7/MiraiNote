@@ -19,10 +19,10 @@ export function parseReleaseTag(tag) {
   if (
     !match ||
     match[0] !== tag ||
-    match.slice(1, 4).some((part) => Number(part) > 65535)
+    [...match.slice(1, 4), match[5]].some((part) => Number(part) > 65535)
   ) {
     throw new Error(
-      "标签格式应为 v1.2.3 或 v1.2.3-beta.1（支持 alpha/beta/rc；前三段最大 65535）",
+      "标签格式应为 v1.2.3 或 v1.2.3-beta.1（支持 alpha/beta/rc；各数字段最大 65535）",
     );
   }
   return { tag, version: tag.slice(1), prerelease: Boolean(match[4]) };

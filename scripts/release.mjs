@@ -95,6 +95,14 @@ export function releaseProject(
       "存在未提交的改动，请先提交准备发布的源码，再运行 pnpm release",
     );
 
+  try {
+    git(root, "cat-file", "-e", "HEAD:.github/workflows/release.yml");
+  } catch {
+    throw new Error(
+      "当前提交没有 .github/workflows/release.yml，请先提交发版工作流，否则推送标签不会自动构建",
+    );
+  }
+
   // Inspect the actual push destination, which can differ from the fetch URL.
   const destinations = git(
     root,

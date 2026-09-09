@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><title>托盘生命周期验收</title>
+  <div id="app"></div>
+  <script type="module">
+    import { mockIPC, mockWindows } from '@tauri-apps/api/mocks'
+    import { emit } from '@tauri-apps/api/event'
+    import { useDocumentsStore } from '/src/stores/documents.ts'
+    import { useSettingsStore } from '/src/stores/settings.ts'
+    window.isTauri = true
+    const state = (window.desktopTest = {
+      calls: [],
+      exitDocuments: [],
+      failStorage: false,
+      emit,
+      edit() {
+        const documents = useDocumentsStore()
+        const doc = documents.create()
+        documents.update(doc.id, '# 退出前最后一段编辑')
+        return doc.id
+      },
+      disableAutoSave() {
+        useSettingsStore().settings.autoSave = false
+      },
+    })
+    const setItem = Storage.prototype.setItem
+    Storage.prototype.setItem = function (...args) {
+      if (state.failStorage)
+        throw new DOMException('Quota exceeded', 'QuotaExceededError')
+      return setItem.apply(this, args)
+    }
+    mockWindows('main')
+    mockIPC(
+      (command, payload) => {
+        state.calls.push({ command, payload })
+        if (command === 'agent_get_settings')
+          return { activeId: '', profiles: [] }
+        if (command === 'desktop_finish_exit') {
+          state.exitDocuments = JSON.parse(
+            localStorage.getItem('miraihub-docs:v1:documents')
+          )
+        }
+      },
+      { shouldMockEvents: true }
+    )
+    await import('/src/main.ts')
+  </script>
+</html>

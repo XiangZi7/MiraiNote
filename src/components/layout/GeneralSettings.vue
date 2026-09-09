@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { useSettingsStore } from '@/stores/settings'
-import { AppIcon, AppLogo, SegmentedControl } from '@/components/ui'
+import { AppIcon, SegmentedControl } from '@/components/ui'
+import { windowApi } from '@/api/ipc/window'
+import AboutSection from './AboutSection.vue'
 const settings = useSettingsStore()
+const desktop = windowApi.isDesktop()
 </script>
 <template>
   <div class="space-y-7 px-6 pt-3 pb-7">
@@ -54,18 +57,17 @@ const settings = useSettingsStore()
           class="bg-faint peer-checked:bg-accent peer-focus-visible:outline-accent relative h-5 w-9 rounded-full transition-colors peer-focus-visible:outline-2 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-4"
       /></label>
     </section>
-    <section class="border-line border-t pt-5">
-      <h3 class="text-muted mb-3 text-xs font-medium">关于</h3>
-      <div class="flex items-center justify-between">
-        <span class="flex items-center gap-2.5 font-medium"
-          ><AppLogo />MiraiNote</span
-        ><span class="text-muted text-xs">0.1.0 · UI 阶段</span>
-      </div>
+    <section
+      v-if="desktop"
+      class="border-line border-t pt-5"
+    >
+      <h3 class="text-muted mb-3 text-xs font-medium">系统托盘</h3>
       <p class="text-muted mt-3 text-xs leading-6">
-        当前版本提供工作台界面与示例交互。使用 CodeMirror、PDF.js、docx-preview
-        与 Tiptap。可导入 Markdown、PDF、DOCX；编辑保存为本地草稿。AI Agent
-        支持模型配置和文档分析；桌面源文件写回仍待接入。
+        关闭窗口后继续在托盘运行，点击托盘图标可恢复窗口。
+        完全退出请右键托盘图标，选择“退出
+        MiraiNote”。再次打开应用会恢复已有窗口。
       </p>
     </section>
+    <AboutSection />
   </div>
 </template>

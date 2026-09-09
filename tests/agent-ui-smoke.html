@@ -65,7 +65,7 @@
         resolvePending?.()
         return
       }
-    })
+    }, { shouldMockEvents: true })
     await import('/src/main.ts')
   </script>
 </html>

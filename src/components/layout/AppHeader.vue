@@ -9,7 +9,7 @@ import { documentTypes } from '@/utils/documents'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AppLogo from '@/components/ui/AppLogo.vue'
 import IconButton from '@/components/ui/IconButton.vue'
-
+import BrandWordmark from '@/components/ui/BrandWordmark.vue'
 const workspace = useWorkspaceStore()
 const settings = useSettingsStore()
 const overlays = useOverlaysStore()
@@ -109,11 +109,12 @@ function more(event: MouseEvent) {
           :size="22"
           data-tauri-drag-region
         />
-        <span
+        <!-- <span
           class="truncate"
           data-tauri-drag-region
           >MiraiNote</span
-        >
+        > -->
+        <BrandWordmark />
       </div>
     </div>
     <div
@@ -182,7 +183,7 @@ function more(event: MouseEvent) {
       <button
         class="window-close hover:!bg-[#c42b36] hover:!text-white"
         aria-label="关闭窗口"
-        title="关闭窗口"
+        title="关闭到系统托盘（右键托盘图标可退出）"
         @click="windowAction(windowApi.close)"
       >
         <AppIcon

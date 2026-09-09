@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "MiraiNote",
         "width": 1440,
         "height": 920,
@@ -28,7 +29,27 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
+    "publisher": "XiangZi7",
+    "homepage": "https://github.com/XiangZi7/MiraiNote",
+    "category": "Productivity",
+    "shortDescription": "MiraiNote 文档工作台",
+    "longDescription": "支持 Markdown 编辑、PDF 与 Word 阅读、分屏工作区和 AI 文档助手的 Windows 桌面应用。",
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"],
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "startMenuFolder": "MiraiNote"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

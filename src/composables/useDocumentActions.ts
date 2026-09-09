@@ -7,6 +7,7 @@ import { downloadFile, downloadBlob } from '@/api/ipc/filesystem'
 import { documentApi } from '@/api/ipc/document'
 import type { MenuItem } from '@/types/workspace'
 import type { DocumentRecord } from '@/types/document'
+import type { LaunchDocument } from '@/api/ipc/window'
 
 export const useDocumentActions = createSharedComposable(() => {
   const documents = useDocumentsStore()
@@ -41,6 +42,33 @@ export const useDocumentActions = createSharedComposable(() => {
   }
   function openFiles() {
     fileDialog.open()
+  }
+  async function importLaunchFiles(files: LaunchDocument[]) {
+    for (const file of files) {
+      if (file.error || file.content === null) {
+        overlays.toast(`${file.name}：${file.error ?? '无法读取文件'}`, true)
+        continue
+      }
+      // Reopening a file focuses its existing draft, preserving unsaved edits.
+      const existing = documents.documents.find(
+        doc => doc.sourcePath?.toLowerCase() === file.path.toLowerCase()
+      )
+      if (existing) {
+        workspace.open(existing.id)
+        continue
+      }
+      try {
+        const doc = await documentApi.open(new File([file.content], file.name, {
+          type: 'text/markdown', lastModified: file.modifiedAt,
+        }))
+        doc.sourcePath = file.path
+        doc.path = file.path.replace(/^\\\\\?\\/, '').replaceAll('\\', '/')
+        documents.documents.push(doc)
+        workspace.open(doc.id)
+      } catch (error) {
+        overlays.toast(error instanceof Error ? error.message : '无法导入 Markdown 文档', true)
+      }
+    }
   }
   function save() {
     const doc = workspace.currentDocument
@@ -209,6 +237,7 @@ export const useDocumentActions = createSharedComposable(() => {
     create,
     openFiles,
     importFiles,
+    importLaunchFiles,
     save,
     exportDocument,
     rename,

@@ -15,6 +15,7 @@ function validDocuments(value: unknown): value is DocumentRecord[] {
         typeof item.id === 'string' &&
         typeof item.name === 'string' &&
         typeof item.path === 'string' &&
+        (item.sourcePath === undefined || typeof item.sourcePath === 'string') &&
         ['markdown', 'pdf', 'word'].includes(String(item.kind)) &&
         ['example', 'local'].includes(String(item.source)) &&
         typeof item.content === 'string' &&
@@ -112,6 +113,7 @@ export const useDocumentsStore = defineStore('documents', () => {
     if (!original) return
     const copy: DocumentRecord = {
       ...original,
+      sourcePath: undefined,
       id: crypto.randomUUID(),
       name: original.name.replace(/(\.[^.]+)$/, ' 副本$1'),
       tags: [...original.tags],

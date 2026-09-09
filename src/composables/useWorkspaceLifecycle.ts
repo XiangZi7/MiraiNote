@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useOverlaysStore } from '@/stores/overlays'
 import { useDocumentActions } from './useDocumentActions'
 import { useDesktopLifecycle } from './useDesktopLifecycle'
+import { useLaunchFiles } from './useLaunchFiles'
 
 export function useWorkspaceLifecycle() {
   const documents = useDocumentsStore(),
@@ -36,6 +37,7 @@ export function useWorkspaceLifecycle() {
     return !storageError
   }
   useDesktopLifecycle(persist)
+  useLaunchFiles()
   const schedule = useDebounceFn(
     () => {
       if (!stopped) persist()

@@ -10,6 +10,7 @@
     let resolvePending
     mockWindows('main')
     mockIPC(async (command, payload) => {
+      if (command === 'desktop_take_launch_files') return []
       if (!command.startsWith('agent_')) return
       window.agentTest.calls.push({
         command,

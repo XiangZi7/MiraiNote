@@ -23,10 +23,10 @@ pub fn show_main_window(app: &AppHandle) {
 }
 
 pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
-    let show = MenuItem::with_id(app, "show", "打开 MiraiNote", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, "show", "打开", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     // Enable quit only after the frontend can flush pending workspace changes.
-    let quit_item = MenuItem::with_id(app, "quit", "退出 MiraiNote", false, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, "quit", "退出", false, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &separator, &quit_item])?;
     let icon = app
         .default_window_icon()

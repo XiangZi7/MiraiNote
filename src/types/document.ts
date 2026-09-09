@@ -6,6 +6,7 @@ export interface DocumentRecord {
   name: string
   kind: DocumentKind
   path: string
+  sourcePath?: string
   content: string
   text: string
   source: 'example' | 'local'

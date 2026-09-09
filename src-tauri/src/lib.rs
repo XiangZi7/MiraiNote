@@ -1,12 +1,15 @@
 mod commands;
 mod desktop;
 mod error;
+mod launch_files;
 mod services;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     if let Err(error) = tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+        .manage(launch_files::LaunchFiles::from_env())
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            launch_files::receive(app, args, cwd);
             desktop::show_main_window(app);
         }))
         .manage(services::agent::manager::AgentService::default())
@@ -17,6 +20,7 @@ pub fn run() {
             desktop::desktop_set_ready,
             desktop::desktop_finish_exit,
             desktop::desktop_show_main,
+            launch_files::desktop_take_launch_files,
             commands::agent::agent_get_settings,
             commands::agent::agent_save_profile,
             commands::agent::agent_delete_profile,

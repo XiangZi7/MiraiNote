@@ -16,6 +16,7 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 import PdfPage from './PdfPage.vue'
 import PdfFileView from './PdfFileView.vue'
 import PdfPagesViewport from './PdfPagesViewport.vue'
+import DocumentOutline from '@/components/workspace/DocumentOutline.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { examplePages } from '../services/example-pages'
 import type { DocumentRecord, DocumentTab } from '@/types/document'
@@ -36,7 +37,7 @@ const thumbnailScale = computed(() =>
 // 响应式状态
 const state = reactive({
   // 左侧导航方式
-  navigation: 'thumbnails' as 'thumbnails' | 'outline' | 'hidden',
+  navigation: 'thumbnails' as 'thumbnails' | 'hidden',
   // 当前文档查找栏
   searching: false,
   // 页内查询文本
@@ -56,6 +57,7 @@ const matches = computed(() =>
         .includes(state.query.toLowerCase())
     )
 )
+const outline = examplePages.map((page, index) => ({ id: String(index + 1), title: page.section, level: 1 }))
 function go(page: number) {
   void viewport.value?.go(
     Math.max(1, Math.min(examplePages.length, Math.round(page) || 1))
@@ -203,7 +205,7 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
         @click="searching = false"
       />
     </div>
-    <div class="pdf-body flex min-h-0 flex-1">
+    <div class="pdf-body relative flex min-h-0 flex-1">
       <aside
         v-if="navigation !== 'hidden'"
         class="pdf-navigation bg-inspector shrink-0 overflow-x-hidden overflow-y-auto"
@@ -218,15 +220,9 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
             label="缩略图"
             :active="navigation === 'thumbnails'"
             @click="navigation = 'thumbnails'"
-          /><IconButton
-            icon="lucide:list-tree"
-            label="目录"
-            :active="navigation === 'outline'"
-            @click="navigation = 'outline'"
           />
         </div>
         <div
-          v-if="navigation === 'thumbnails'"
           class="thumbnails grid justify-center gap-4 px-2.5 pt-1 pb-6"
         >
           <button
@@ -253,19 +249,6 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
               />
             </div>
             <span>{{ item.number }}</span>
-          </button>
-        </div>
-        <div
-          v-else
-          class="[&>button]:text-secondary [&>button:hover]:bg-selected [&>.selected]:bg-selected [&_span]:text-muted px-2.5 outline [&>button]:flex [&>button]:w-full [&>button]:justify-between [&>button]:rounded-[5px] [&>button]:px-2 [&>button]:py-2.5 [&>button]:text-xs"
-        >
-          <button
-            v-for="item in matches"
-            :key="item.number"
-            :class="{ selected: tab.position.page === item.number }"
-            @click="go(item.number)"
-          >
-            {{ item.page.section }}<span>{{ item.number }}</span>
           </button>
         </div>
       </aside>
@@ -295,6 +278,7 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
           </div>
         </template>
       </PdfPagesViewport>
+      <DocumentOutline :items="outline" @select="go(Number($event))" />
     </div>
   </div>
 </template>

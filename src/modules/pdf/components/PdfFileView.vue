@@ -11,6 +11,8 @@ import {
 } from 'vue'
 import type { PDFDocumentProxy, PDFDocumentLoadingTask } from 'pdfjs-dist'
 import { loadPdf } from '../services/pdf'
+import { readPdfOutline, type PdfOutlineEntry } from '../services/outline'
+import DocumentOutline from '@/components/workspace/DocumentOutline.vue'
 import { documentApi } from '@/api/ipc/document'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useSettingsStore } from '@/stores/settings'
@@ -37,6 +39,8 @@ const navigationWidth = computed({
 })
 const pageSizes = shallowRef<PdfPageSize[]>([])
 const pdf = shallowRef<PDFDocumentProxy>()
+const outline = shallowRef<PdfOutlineEntry[]>([])
+const outlineError = shallowRef('这份 PDF 没有书签目录')
 const viewport = useTemplateRef('viewport'),
   input = useTemplateRef('search')
 // 响应式状态
@@ -62,6 +66,10 @@ function go(page: number) {
     Math.min(pdf.value?.numPages ?? 1, Math.round(page) || 1)
   )
   void viewport.value?.go(target)
+}
+function goOutline(id: string) {
+  const entry = outline.value.find(item => item.id === id)
+  if (entry?.page) go(entry.page)
 }
 function position(page: number, offset: number) {
   props.tab.position.page = page
@@ -142,6 +150,11 @@ onMounted(async () => {
     pageSizes.value = sizes
     props.document.pages = loaded.numPages
     pdf.value = loaded
+    void readPdfOutline(loaded).then(items => {
+      if (!disposed) outline.value = items
+    }).catch(() => {
+      if (!disposed) outlineError.value = '无法读取这份 PDF 的书签目录'
+    })
   } catch (reason) {
     if (!disposed)
       state.error = reason instanceof Error ? reason.message : 'PDF 读取失败'
@@ -239,7 +252,7 @@ onBeforeUnmount(() => {
     </div>
     <div
       v-else
-      class="flex min-h-0 flex-1"
+      class="relative flex min-h-0 flex-1"
     >
       <template v-if="thumbnails">
         <PdfThumbnails
@@ -272,6 +285,7 @@ onBeforeUnmount(() => {
           />
         </template>
       </PdfPagesViewport>
+      <DocumentOutline :items="outline" :empty-text="outlineError" @select="goOutline" />
     </div>
   </div>
 </template>

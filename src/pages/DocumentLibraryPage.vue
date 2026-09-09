@@ -9,6 +9,8 @@ import { fileSystemApi } from '@/api/ipc/filesystem'
 import { documentTypes, formatSize, formatDate } from '@/utils/documents'
 import { AppIcon, AppButton, IconButton } from '@/components/ui'
 import type { LibrarySection } from '@/types/workspace'
+defineOptions({ name: 'DocumentLibraryPage' })
+const props = defineProps<{ section: LibrarySection }>()
 const workspace = useWorkspaceStore()
 const documents = useDocumentsStore()
 const folders = useFoldersStore()
@@ -23,11 +25,7 @@ const titles: Record<LibrarySection, string> = {
   pdf: 'PDF',
   word: 'Word',
 }
-const section = computed<LibrarySection>(() =>
-  workspace.library && !workspace.libraryFolder
-    ? (workspace.library as LibrarySection)
-    : 'all'
-)
+const section = computed(() => props.section)
 const title = computed(() => titles[section.value])
 const filtered = computed(() =>
   documents

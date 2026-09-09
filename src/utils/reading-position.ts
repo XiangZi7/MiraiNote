@@ -15,6 +15,8 @@ export function validReadingPosition(value: unknown): value is ReadingPosition {
     Number(position.cursor) >= 0 &&
     Number.isInteger(position.cursor) &&
     Number(position.scroll) >= 0 &&
+    (position.previewScroll === undefined ||
+      (typeof position.previewScroll === 'number' && Number.isFinite(position.previewScroll) && position.previewScroll >= 0)) &&
     Number(position.page) >= 1 &&
     Number.isInteger(position.page) &&
     Number(position.zoom) >= 25 &&

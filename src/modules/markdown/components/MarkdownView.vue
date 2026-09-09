@@ -110,6 +110,8 @@ async function action(action: MarkdownAction) {
         <MarkdownPreview
           ref="preview"
           :content="document.content"
+          :scroll="tab.position.previewScroll ?? 0"
+          @position="tab.position.previewScroll = $event"
         />
       </div>
     </div>

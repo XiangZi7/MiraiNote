@@ -120,7 +120,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       }
       pane.tabs.push(tab)
     }
-    tab.position.mode = 'preview'
     activate(pane.id, tab.id)
     doc.openedAt = new Date().toISOString()
   }

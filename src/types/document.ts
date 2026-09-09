@@ -28,6 +28,7 @@ export interface ReadingPosition {
   ratio: number
   cursor: number
   scroll: number
+  previewScroll?: number
   page: number
   zoom: number
   rotation: number

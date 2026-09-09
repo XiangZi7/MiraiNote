@@ -5,17 +5,24 @@ import {
   shallowRef,
   watch,
   onBeforeUnmount,
+  onActivated,
+  onDeactivated,
+  onMounted,
+  nextTick,
 } from 'vue'
 import { renderMarkdownDocument } from '../services/render'
 import DocumentOutline from '@/components/workspace/DocumentOutline.vue'
 import { useDomTextSearch } from '@/composables/useDomTextSearch'
-const props = defineProps<{ content: string }>()
+const props = withDefaults(defineProps<{ content: string; scroll?: number }>(), { scroll: 0 })
+const emit = defineEmits<{ position: [scroll: number] }>()
 const rendered = computed(() => renderMarkdownDocument(props.content))
 const scroller = useTemplateRef('scroller')
 const article = useTemplateRef('article')
 const activeId = shallowRef('')
 let headings: HTMLElement[] = []
 let frame = 0
+let active = true
+let restoring = false
 function updateActive() {
   frame = 0
   const container = scroller.value
@@ -34,8 +41,26 @@ function updateActive() {
   activeId.value = active?.dataset.miraiHeading ?? ''
 }
 function scroll() {
+  if (!active || restoring) return
+  if (scroller.value) emit('position', scroller.value.scrollTop)
   if (!frame) frame = requestAnimationFrame(updateActive)
 }
+async function restore() {
+  active = true
+  restoring = true
+  await nextTick()
+  if (!active) return
+  if (scroller.value) scroller.value.scrollTop = props.scroll
+  updateActive()
+  restoring = false
+}
+onMounted(restore)
+onActivated(restore)
+onDeactivated(() => {
+  active = false
+  cancelAnimationFrame(frame)
+  frame = 0
+})
 watch(
   [rendered, article],
   () => {

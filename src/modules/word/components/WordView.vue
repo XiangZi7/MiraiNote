@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useTemplateRef, onMounted, nextTick, watch } from 'vue'
+import { computed, useTemplateRef, onMounted, onActivated, onDeactivated, nextTick, watch } from 'vue'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import { TableKit } from '@tiptap/extension-table'
@@ -16,6 +16,7 @@ import { useDomTextSearch } from '@/composables/useDomTextSearch'
 import type { DocumentRecord, DocumentTab } from '@/types/document'
 
 const props = defineProps<{ document: DocumentRecord; tab: DocumentTab }>()
+let active = true
 const documents = useDocumentsStore(),
   workspace = useWorkspaceStore(),
   actions = useDocumentActions()
@@ -106,7 +107,16 @@ function restoreScroll() {
   if (viewport.value) viewport.value.scrollTop = props.tab.position.scroll
   search.refresh(false, true)
 }
+function scroll(event: Event) {
+  if (active) props.tab.position.scroll = (event.target as HTMLElement).scrollTop
+}
 onMounted(restoreScroll)
+onActivated(async () => {
+  active = true
+  await nextTick()
+  if (active && viewport.value) viewport.value.scrollTop = props.tab.position.scroll
+})
+onDeactivated(() => { active = false })
 </script>
 
 <template>
@@ -147,7 +157,7 @@ onMounted(restoreScroll)
       tabindex="0"
       aria-label="Word 文档阅读区域"
       class="word-viewport bg-sidebar flex-1 overflow-auto px-10 py-[30px]"
-      @scroll="tab.position.scroll = ($event.target as HTMLElement).scrollTop"
+      @scroll.passive="scroll"
     >
       <DocxPreview
         v-if="originalPreview && document.assetId"

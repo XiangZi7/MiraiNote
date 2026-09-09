@@ -1,33 +1,30 @@
 <script setup lang="ts">
 import { AppButton } from '@/components/ui'
-import { computed, defineAsyncComponent } from 'vue'
+import { computed } from 'vue'
+import { RouterView, useRouter, type RouteLocationNormalized } from 'vue-router'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useDocumentsStore } from '@/stores/documents'
 import { useDocumentActions } from '@/composables/useDocumentActions'
 import TabBar from '@/components/tabs/TabBar.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import type { PaneNode } from '@/types/workspace'
-import type { DocumentKind } from '@/types/document'
 
 const props = defineProps<{ pane: PaneNode }>()
 const workspace = useWorkspaceStore()
 const documents = useDocumentsStore()
 const actions = useDocumentActions()
+const router = useRouter()
 const tab = computed(() =>
   props.pane.tabs.find(item => item.id === props.pane.activeTabId)
 )
 const doc = computed(() => documents.get(tab.value?.documentId))
-const renderers = {
-  markdown: defineAsyncComponent(
-    () => import('@/modules/markdown/components/MarkdownView.vue')
-  ),
-  pdf: defineAsyncComponent(
-    () => import('@/modules/pdf/components/PdfView.vue')
-  ),
-  word: defineAsyncComponent(
-    () => import('@/modules/word/components/WordView.vue')
-  ),
-} satisfies Record<DocumentKind, unknown>
+const documentRoute = computed<RouteLocationNormalized>(() => {
+  const route = router.resolve(tab.value ? {
+    name: 'document',
+    params: { paneId: props.pane.id, tabId: tab.value.id },
+  } : { name: 'workspace' })
+  return { ...route, name: route.name ?? undefined }
+})
 const dropEdge = computed(() =>
   workspace.dropTarget?.paneId === props.pane.id &&
   'edge' in workspace.dropTarget
@@ -46,15 +43,13 @@ const dropEdge = computed(() =>
   >
     <TabBar :pane="pane" />
     <div class="pane-content relative min-h-0 flex-1">
-      <component
-        :is="renderers[doc.kind]"
-        v-if="doc && tab"
-        :key="`${tab.id}:${doc.kind}`"
-        :document="doc"
-        :tab="tab"
-      />
+      <RouterView :route="documentRoute" v-slot="{ Component, route }">
+        <KeepAlive :max="6" include="DocumentPage">
+          <component :is="Component" v-if="doc && tab" :key="route.params.tabId as string" />
+        </KeepAlive>
+      </RouterView>
       <div
-        v-else
+        v-if="!doc || !tab"
         class="empty-pane text-muted [&>svg]:text-faint [&>h2]:text-secondary flex h-full flex-col items-center justify-center [&>h2]:mb-2 [&>h2]:text-[19px] [&>h2]:font-medium [&>svg]:mb-[22px]"
       >
         <AppIcon

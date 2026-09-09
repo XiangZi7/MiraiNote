@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent, shallowRef } from 'vue'
+import { RouterView } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useOverlaysStore } from '@/stores/overlays'
@@ -11,9 +12,6 @@ import ToastHost from '@/components/ui/ToastHost.vue'
 import AppHeader from './AppHeader.vue'
 import Sidebar from './Sidebar.vue'
 import Inspector from './Inspector.vue'
-import WorkspaceNode from '@/components/workspace/WorkspaceNode.vue'
-import DocumentLibrary from '@/components/workspace/DocumentLibrary.vue'
-import FolderLibrary from '@/components/workspace/FolderLibrary.vue'
 import { isSupportedName } from '@/utils/documents'
 const SearchPalette = defineAsyncComponent(
   () => import('@/components/search/SearchPalette.vue')
@@ -143,16 +141,14 @@ function context(event: MouseEvent) {
         label="调整侧栏宽度"
       />
       <main class="min-h-0 min-w-0 flex-1">
-        <FolderLibrary
-          v-if="workspace.libraryFolder"
-          :key="workspace.libraryFolder"
-        /><DocumentLibrary
-          v-else-if="workspace.library"
-          :key="workspace.library"
-        /><WorkspaceNode
-          v-else
-          :node="workspace.root"
-        />
+        <RouterView v-slot="{ Component, route }">
+          <KeepAlive :max="1" include="WorkspacePage">
+            <component v-if="route.meta.cacheKey === 'workspace'" :is="Component" key="workspace" />
+          </KeepAlive>
+          <KeepAlive :max="12" include="DocumentLibraryPage,FolderLibraryPage">
+            <component v-if="route.meta.cacheKey !== 'workspace'" :is="Component" :key="route.path" />
+          </KeepAlive>
+        </RouterView>
       </main>
       <template v-if="overlays.state.inspector"
         ><ResizeHandle

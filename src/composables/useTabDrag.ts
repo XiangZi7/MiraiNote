@@ -1,4 +1,4 @@
-import { onBeforeUnmount } from 'vue'
+import { onBeforeUnmount, onDeactivated } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import { useWorkspaceStore } from '@/stores/workspace'
 import type { PaneNode } from '@/types/workspace'
@@ -156,6 +156,7 @@ export function useTabDrag(pane: () => PaneNode) {
     }
   })
   onBeforeUnmount(() => finish(false))
+  onDeactivated(() => finish(false))
   return {
     start,
     activate: (tabId: string) => {

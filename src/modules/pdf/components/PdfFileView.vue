@@ -3,6 +3,8 @@ import {
   computed,
   onBeforeUnmount,
   onMounted,
+  onActivated,
+  onDeactivated,
   reactive,
   toRefs,
   shallowRef,
@@ -107,8 +109,8 @@ async function fit(whole = false) {
   )
 }
 async function find() {
-  if (workspace.activeTab?.id !== props.tab.id) return
-  state.searching = !state.searching
+  if (workspace.library || workspace.activeTab?.id !== props.tab.id) return
+  state.searching = true
   await nextTick()
   input.value?.focus()
 }
@@ -173,6 +175,11 @@ onMounted(async () => {
     if (!disposed)
       state.error = reason instanceof Error ? reason.message : 'PDF 读取失败'
   }
+})
+onActivated(() => window.addEventListener('mirai:find', find))
+onDeactivated(() => {
+  searchRevision++
+  window.removeEventListener('mirai:find', find)
 })
 onBeforeUnmount(() => {
   disposed = true

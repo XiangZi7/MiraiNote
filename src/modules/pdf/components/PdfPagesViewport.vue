@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, watch } from 'vue'
+import { computed, nextTick, onMounted, onActivated, onDeactivated, watch } from 'vue'
 import { useVirtualList } from '@vueuse/core'
 import type { ReadingPosition } from '@/types/document'
 import type { PdfPageSize } from '../types'
@@ -19,11 +19,14 @@ const frameWidth = computed(() =>
 )
 let restoring = true
 let revision = 0
+let active = true
 
 async function go(page: number, offset = 0) {
+  if (!active) return
   const version = ++revision
   restoring = true
   await nextTick()
+  if (!active || version !== revision) return
   const index = Math.max(0, Math.min(rows.value.length - 1, page - 1))
   const row = rows.value[index],
     element = containerProps.ref.value
@@ -37,6 +40,7 @@ async function go(page: number, offset = 0) {
   if (version === revision) restoring = false
 }
 function scroll() {
+  if (!active) return
   containerProps.onScroll()
   const element = containerProps.ref.value
   if (!element || restoring || !rows.value.length) return
@@ -59,6 +63,15 @@ watch(
 )
 onMounted(() => {
   void go(props.position.page, props.position.pdfOffset ?? 0)
+})
+onActivated(() => {
+  active = true
+  void go(props.position.page, props.position.pdfOffset ?? 0)
+})
+onDeactivated(() => {
+  active = false
+  revision++
+  restoring = true
 })
 defineExpose({
   go,

@@ -3,6 +3,8 @@ import {
   nextTick,
   onBeforeUnmount,
   onMounted,
+  onActivated,
+  onDeactivated,
   reactive,
   watch,
 } from 'vue'
@@ -32,6 +34,7 @@ export function useDocumentSearch(options: {
   const current = computed(() => state.index + 1)
   let previousTarget: DocumentSearchTarget | null | undefined
   let disposed = false
+  let active = true
   let scheduled = false
   let resetPending = false
 
@@ -44,11 +47,12 @@ export function useDocumentSearch(options: {
       scheduled = false
       const reset = resetPending
       resetPending = false
-      if (!disposed) refresh(reset)
+      if (!disposed && active) refresh(reset)
     })
   }
 
   function refresh(reset = true, reveal = reset) {
+    if (!active) return
     const target = options.target()
     if (previousTarget !== target) previousTarget?.clearSearch()
     previousTarget = target
@@ -104,6 +108,16 @@ export function useDocumentSearch(options: {
     if (options.active()) void open()
   }
   onMounted(() => window.addEventListener('mirai:find', find))
+  onActivated(() => {
+    active = true
+    window.addEventListener('mirai:find', find)
+    scheduleRefresh(false)
+  })
+  onDeactivated(() => {
+    active = false
+    previousTarget?.clearSearch()
+    window.removeEventListener('mirai:find', find)
+  })
   onBeforeUnmount(() => {
     disposed = true
     previousTarget?.clearSearch()

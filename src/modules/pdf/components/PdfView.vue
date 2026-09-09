@@ -7,6 +7,8 @@ import {
   useTemplateRef,
   onMounted,
   onBeforeUnmount,
+  onActivated,
+  onDeactivated,
   nextTick,
 } from 'vue'
 import { useWorkspaceStore } from '@/stores/workspace'
@@ -89,8 +91,8 @@ function fit(page = false) {
     )
 }
 async function find() {
-  if (workspace.activeTab?.id !== props.tab.id) return
-  state.searching = !state.searching
+  if (props.document.assetId || workspace.library || workspace.activeTab?.id !== props.tab.id) return
+  state.searching = true
   await nextTick()
   searchInput.value?.focus()
 }
@@ -104,6 +106,8 @@ async function fullscreen() {
   }
 }
 onMounted(() => window.addEventListener('mirai:find', find))
+onActivated(() => window.addEventListener('mirai:find', find))
+onDeactivated(() => window.removeEventListener('mirai:find', find))
 onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
 </script>
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, useTemplateRef, watch } from 'vue'
+import { onMounted, onBeforeUnmount, onActivated, onDeactivated, useTemplateRef, watch } from 'vue'
 import { EditorView } from '@codemirror/view'
 import { createEditor, applyMarkdownAction } from '../services/editor'
 import type { MarkdownAction } from '../types'
@@ -12,19 +12,28 @@ const emit = defineEmits<{
 }>()
 const element = useTemplateRef('editorHost')
 let editor: EditorView | undefined
+let active = true
 onMounted(() => {
   if (!element.value) return
   editor = createEditor(
     element.value,
     props.content,
     content => emit('change', content),
-    (cursor, scroll) => emit('position', cursor, scroll)
+    (cursor, scroll) => { if (active) emit('position', cursor, scroll) }
   )
   editor.dispatch({
     selection: { anchor: Math.min(props.cursor, editor.state.doc.length) },
   })
   editor.scrollDOM.scrollTop = props.scroll
 })
+onActivated(() => {
+  active = true
+  if (editor) {
+    editor.scrollDOM.scrollTop = props.scroll
+    editor.requestMeasure()
+  }
+})
+onDeactivated(() => { active = false })
 watch(
   () => props.content,
   value => {

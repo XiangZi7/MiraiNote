@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount } from 'vue'
+import { onBeforeUnmount, onDeactivated } from 'vue'
 const props = withDefaults(
   defineProps<{
     modelValue: number
@@ -73,6 +73,7 @@ function keyboard(event: KeyboardEvent) {
   emit('end')
 }
 onBeforeUnmount(() => cleanup?.())
+onDeactivated(() => cleanup?.())
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef } from 'vue'
+import { computed, shallowRef, onActivated } from 'vue'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useDocumentsStore } from '@/stores/documents'
 import { useFoldersStore } from '@/stores/folders'
@@ -12,6 +12,8 @@ import {
   groupEntries,
 } from '@/utils/documents'
 import { AppIcon, AppButton, IconButton } from '@/components/ui'
+defineOptions({ name: 'FolderLibraryPage' })
+const props = defineProps<{ folderPath: string }>()
 
 const workspace = useWorkspaceStore()
 const documents = useDocumentsStore()
@@ -19,7 +21,7 @@ const folders = useFoldersStore()
 const overlays = useOverlaysStore()
 const actions = useDocumentActions()
 const query = shallowRef('')
-const path = computed(() => workspace.libraryFolder ?? '')
+const path = computed(() => props.folderPath)
 const folder = computed(() => folders.get(path.value))
 const notice = computed(() => folders.notices[path.value])
 const scanning = computed(() => folders.scanning === path.value)
@@ -36,6 +38,9 @@ const groups = computed(() => groupEntries(entries.value, query.value))
 const total = computed(() =>
   groups.value.reduce((count, group) => count + group.items.length, 0)
 )
+onActivated(() => {
+  if (!folders.entries[path.value] && folders.scanning !== path.value) void actions.refreshFolder(path.value)
+})
 </script>
 
 <template>

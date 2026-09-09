@@ -3,6 +3,8 @@ import {
   nextTick,
   onBeforeUnmount,
   onMounted,
+  onActivated,
+  onDeactivated,
   shallowRef,
   useId,
   useTemplateRef,
@@ -83,6 +85,8 @@ function keyboard(event: KeyboardEvent) {
   buttons[next]?.focus()
 }
 onMounted(() => document.addEventListener('pointerdown', outside))
+onActivated(() => document.addEventListener('pointerdown', outside))
+onDeactivated(() => document.removeEventListener('pointerdown', outside))
 onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
 </script>
 

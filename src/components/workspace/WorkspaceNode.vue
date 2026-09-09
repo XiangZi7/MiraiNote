@@ -1,19 +1,35 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue'
+import { inject, onBeforeUnmount, useTemplateRef, type ComponentPublicInstance } from 'vue'
 import { useElementSize } from '@vueuse/core'
 import ResizeHandle from '@/components/ui/ResizeHandle.vue'
-import DocumentPane from './DocumentPane.vue'
+import { paneHostsKey } from './pane-hosts'
 import type { LayoutNode } from '@/types/workspace'
 
-defineProps<{ node: LayoutNode }>()
+const props = defineProps<{ node: LayoutNode }>()
+const hosts = inject(paneHostsKey)!
+let registered: { id: string; element: HTMLElement } | undefined
+function unregister() {
+  if (registered && hosts.get(registered.id) === registered.element) hosts.delete(registered.id)
+  registered = undefined
+}
+function setHost(element: Element | ComponentPublicInstance | null) {
+  if (registered?.id === props.node.id && registered.element === element && hosts.get(registered.id) === element) return
+  unregister()
+  if (element instanceof HTMLElement) {
+    registered = { id: props.node.id, element }
+    hosts.set(props.node.id, element)
+  }
+}
+onBeforeUnmount(unregister)
 const element = useTemplateRef('split')
 const { width, height } = useElementSize(element)
 </script>
 
 <template>
-  <DocumentPane
+  <div
     v-if="node.type === 'pane'"
-    :pane="node"
+    :ref="setHost"
+    class="size-full min-h-0 min-w-0"
   />
   <div
     v-else

@@ -150,11 +150,13 @@ onMounted(async () => {
     pageSizes.value = sizes
     props.document.pages = loaded.numPages
     pdf.value = loaded
-    void readPdfOutline(loaded).then(items => {
-      if (!disposed) outline.value = items
-    }).catch(() => {
-      if (!disposed) outlineError.value = '无法读取这份 PDF 的书签目录'
-    })
+    void readPdfOutline(loaded)
+      .then(items => {
+        if (!disposed) outline.value = items
+      })
+      .catch(() => {
+        if (!disposed) outlineError.value = '无法读取这份 PDF 的书签目录'
+      })
   } catch (reason) {
     if (!disposed)
       state.error = reason instanceof Error ? reason.message : 'PDF 读取失败'
@@ -285,7 +287,11 @@ onBeforeUnmount(() => {
           />
         </template>
       </PdfPagesViewport>
-      <DocumentOutline :items="outline" :empty-text="outlineError" @select="goOutline" />
+      <DocumentOutline
+        :items="outline"
+        :empty-text="outlineError"
+        @select="goOutline"
+      />
     </div>
   </div>
 </template>

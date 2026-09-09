@@ -11,13 +11,16 @@ export function useLaunchFiles() {
   let pending = Promise.resolve()
   function drain() {
     // Serialize notifications so arrivals during an import are drained afterwards.
-    pending = pending.then(async () => {
-      if (stopped) return
-      const files = await windowApi.takeLaunchFiles()
-      if (!stopped && files.length) await actions.importLaunchFiles(files)
-    }).catch(() => {
-      if (!stopped) overlays.toast('无法打开启动时传入的文档，请尝试重新打开。', true)
-    })
+    pending = pending
+      .then(async () => {
+        if (stopped) return
+        const files = await windowApi.takeLaunchFiles()
+        if (!stopped && files.length) await actions.importLaunchFiles(files)
+      })
+      .catch(() => {
+        if (!stopped)
+          overlays.toast('无法打开启动时传入的文档，请尝试重新打开。', true)
+      })
   }
   onMounted(async () => {
     if (!windowApi.isDesktop()) return

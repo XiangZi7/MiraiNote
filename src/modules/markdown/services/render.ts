@@ -23,9 +23,18 @@ export function renderMarkdownDocument(source: string) {
     if (token.type !== 'heading_open') return
     const inline = tokens[index + 1]
     const id = String(headings.length)
-    const title = inline?.children?.map(child =>
-      ['text', 'code_inline', 'image'].includes(child.type) ? child.content : child.type === 'softbreak' ? ' ' : ''
-    ).join('') || inline?.content || '未命名标题'
+    const title =
+      inline?.children
+        ?.map(child =>
+          ['text', 'code_inline', 'image'].includes(child.type)
+            ? child.content
+            : child.type === 'softbreak'
+              ? ' '
+              : ''
+        )
+        .join('') ||
+      inline?.content ||
+      '未命名标题'
     token.attrSet('data-mirai-heading', id)
     headings.push({ id, title, level: Number(token.tag.slice(1)) })
   })

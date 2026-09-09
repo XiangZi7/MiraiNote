@@ -58,15 +58,21 @@ export const useDocumentActions = createSharedComposable(() => {
         continue
       }
       try {
-        const doc = await documentApi.open(new File([file.content], file.name, {
-          type: 'text/markdown', lastModified: file.modifiedAt,
-        }))
+        const doc = await documentApi.open(
+          new File([file.content], file.name, {
+            type: 'text/markdown',
+            lastModified: file.modifiedAt,
+          })
+        )
         doc.sourcePath = file.path
         doc.path = file.path.replace(/^\\\\\?\\/, '').replaceAll('\\', '/')
         documents.documents.push(doc)
         workspace.open(doc.id)
       } catch (error) {
-        overlays.toast(error instanceof Error ? error.message : '无法导入 Markdown 文档', true)
+        overlays.toast(
+          error instanceof Error ? error.message : '无法导入 Markdown 文档',
+          true
+        )
       }
     }
   }

@@ -38,7 +38,10 @@ function select(id: string) {
       aria-label="文档目录"
       @click="state.open = !state.open"
     >
-      <AppIcon name="lucide:list-tree" :size="15" />目录
+      <AppIcon
+        name="lucide:list-tree"
+        :size="15"
+      />目录
     </button>
     <nav
       v-if="state.open"
@@ -52,10 +55,19 @@ function select(id: string) {
         :disabled="item.disabled"
         :title="item.title"
         class="text-secondary enabled:hover:bg-hover enabled:hover:text-primary block w-full rounded-md py-2 pr-2 text-left text-xs leading-5 break-words disabled:opacity-50"
-        :style="{ paddingLeft: `${8 + Math.min(Math.max(item.level - 1, 0), 5) * 12}px` }"
+        :style="{
+          paddingLeft: `${8 + Math.min(Math.max(item.level - 1, 0), 5) * 12}px`,
+        }"
         @click="select(item.id)"
-      >{{ item.title }}</button>
-      <p v-if="!items.length" class="text-muted px-2 py-3 text-xs">{{ emptyText }}</p>
+      >
+        {{ item.title }}
+      </button>
+      <p
+        v-if="!items.length"
+        class="text-muted px-2 py-3 text-xs"
+      >
+        {{ emptyText }}
+      </p>
     </nav>
   </div>
 </template>

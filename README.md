@@ -15,6 +15,12 @@
 
 安装信息的发布者为 `XiangZi7`，项目主页与问题反馈入口位于“设置 → 关于”；版本号随发版自动同步。应用标识 `com.admin.mirainote` 保持稳定，以继续使用已有工作区和安装升级标识。
 
+安装欢迎页提供默认勾选的“用 MiraiNote 默认打开 .md 文档”选项。勾选后注册 Markdown 打开方式，并在安装后打开 Windows 默认应用设置，选择 MiraiNote 后确认 `.md` 关联；取消勾选则不更改关联。Windows 10/11 的最终默认应用由用户在系统设置中确认，安装器不会修改受保护的 `UserChoice`。静默升级保留此前的选择，不弹出设置页；卸载会移除此安装的注册信息。相关系统接口见 [Windows 默认应用设置](https://learn.microsoft.com/en-us/windows/apps/develop/launch/launch-default-apps-settings)。
+
+双击 `.md` 文件会在 MiraiNote 中打开，支持含中文、空格的文件路径；程序已驻留时会恢复窗口并打开文件。重复打开同一文件会切换到已有草稿，保留未保存的修改。编辑仍保存到工作区，导出后才能另存文件。
+
+Markdown 标题目录和 PDF 书签目录位于阅读区右上角，使用绝对定位浮层。展开目录不会改变正文宽度、排版或 PDF 页面视口；点击标题跳转，Esc 可收起目录。PDF 缩略图仍是单独可调整宽度的导航栏。
+
 ## 运行
 
 ```sh
@@ -71,7 +77,7 @@ Actions 自动执行前端测试、桌面 IPC/UI 回归、Rust 测试、NSIS 构
 
 这是界面与文档引擎接入阶段，尚未完成需求中的全部 19 个阶段。导入内容保存在此设备的工作区（文本草稿使用 localStorage，PDF / DOCX 原文件副本使用 IndexedDB），当前保存与重命名、移动、移除操作针对工作区记录；Rust 文件系统写回尚未接入。
 
-Markdown 可导出 `.md`；PDF 和未编辑 DOCX 可导出原文件；编辑后的 Word 暂导出 HTML，尚未实现 DOCX 编辑稿回写和旧 `.doc` 格式。Markdown 的 Mermaid / 数学公式、真实 PDF 目录仍待接入。AI 在 Windows 桌面端通过用户配置的模型服务调用；浏览器仅预览设置界面。AI 对话当前保留于本次应用内存中，跨重启历史和直接应用编辑建议尚未实现。当前单文件导入限制为 50 MB。
+Markdown 可导出 `.md`；PDF 和未编辑 DOCX 可导出原文件；编辑后的 Word 暂导出 HTML，尚未实现 DOCX 编辑稿回写和旧 `.doc` 格式。Markdown 的 Mermaid / 数学公式仍待接入。AI 在 Windows 桌面端通过用户配置的模型服务调用；浏览器仅预览设置界面。AI 对话当前保留于本次应用内存中，跨重启历史和直接应用编辑建议尚未实现。当前单文件导入限制为 50 MB。
 
 ## 代码边界
 

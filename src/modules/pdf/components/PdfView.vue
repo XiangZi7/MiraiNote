@@ -57,7 +57,11 @@ const matches = computed(() =>
         .includes(state.query.toLowerCase())
     )
 )
-const outline = examplePages.map((page, index) => ({ id: String(index + 1), title: page.section, level: 1 }))
+const outline = examplePages.map((page, index) => ({
+  id: String(index + 1),
+  title: page.section,
+  level: 1,
+}))
 function go(page: number) {
   void viewport.value?.go(
     Math.max(1, Math.min(examplePages.length, Math.round(page) || 1))
@@ -222,9 +226,7 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
             @click="navigation = 'thumbnails'"
           />
         </div>
-        <div
-          class="thumbnails grid justify-center gap-4 px-2.5 pt-1 pb-6"
-        >
+        <div class="thumbnails grid justify-center gap-4 px-2.5 pt-1 pb-6">
           <button
             v-for="item in matches"
             :key="item.number"
@@ -278,7 +280,10 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
           </div>
         </template>
       </PdfPagesViewport>
-      <DocumentOutline :items="outline" @select="go(Number($event))" />
+      <DocumentOutline
+        :items="outline"
+        @select="go(Number($event))"
+      />
     </div>
   </div>
 </template>

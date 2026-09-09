@@ -7,12 +7,22 @@
     import { emit } from '@tauri-apps/api/event'
     import { useDocumentsStore } from '/src/stores/documents.ts'
     import { useSettingsStore } from '/src/stores/settings.ts'
+    import { useWorkspaceStore } from '/src/stores/workspace.ts'
     window.isTauri = true
     const state = (window.desktopTest = {
       calls: [],
       exitDocuments: [],
       failStorage: false,
-      launchFiles: [],
+      launchFiles: window.initialLaunchFiles ?? [],
+      documents() {
+        return useDocumentsStore().documents
+      },
+      openExamplePdf() {
+        const doc = useDocumentsStore().documents.find(
+          doc => doc.kind === 'pdf'
+        )
+        useWorkspaceStore().open(doc.id)
+      },
       emit,
       edit() {
         const documents = useDocumentsStore()
@@ -33,8 +43,9 @@
     mockWindows('main')
     mockIPC(
       (command, payload) => {
-      state.calls.push({ command, payload })
-      if (command === 'desktop_take_launch_files') return state.launchFiles.splice(0)
+        state.calls.push({ command, payload })
+        if (command === 'desktop_take_launch_files')
+          return state.launchFiles.splice(0)
         if (command === 'agent_get_settings')
           return { activeId: '', profiles: [] }
         if (command === 'desktop_finish_exit') {

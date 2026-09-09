@@ -16,7 +16,7 @@ const emit = defineEmits<{
     <SegmentedControl
       :model-value="editing ? 'edit' : 'read'"
       :options="[
-        { label: '阅读', value: 'read' },
+        { label: '预览', value: 'read' },
         { label: '编辑', value: 'edit' },
       ]"
       label="Word 模式"

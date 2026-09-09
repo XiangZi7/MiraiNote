@@ -16,7 +16,7 @@ import {
 } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
-import { search, searchKeymap, openSearchPanel } from '@codemirror/search'
+import { documentSearchExtension } from './search'
 import { tags } from '@lezer/highlight'
 import type { MarkdownAction } from '../types'
 
@@ -44,7 +44,10 @@ export function applyMarkdownAction(
 ): boolean {
   if (action === 'undo') return undo(view)
   if (action === 'redo') return redo(view)
-  if (action === 'find') return openSearchPanel(view)
+  if (action === 'find') {
+    window.dispatchEvent(new CustomEvent('mirai:find'))
+    return true
+  }
   const { from, to } = view.state.selection.main
   const selected = view.state.sliceDoc(from, to)
   const surrounds: Partial<Record<MarkdownAction, [string, string, string]>> = {
@@ -119,13 +122,12 @@ export function createEditor(
         markdown(),
         syntaxHighlighting(highlight),
         EditorView.lineWrapping,
-        search({ top: true }),
+        documentSearchExtension,
         keymap.of([
           { key: 'Mod-b', run: view => applyMarkdownAction(view, 'bold') },
           { key: 'Mod-i', run: view => applyMarkdownAction(view, 'italic') },
           ...defaultKeymap,
           ...historyKeymap,
-          ...searchKeymap,
           indentWithTab,
         ]),
         EditorView.updateListener.of(update => {
@@ -175,24 +177,6 @@ export function createEditor(
           '.cm-cursor': { borderLeftColor: 'var(--text)' },
           '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
             backgroundColor: 'var(--accent-soft)',
-          },
-          '.cm-panels': {
-            backgroundColor: 'var(--bg)',
-            color: 'var(--secondary)',
-          },
-          '.cm-panels-top': { borderBottom: '1px solid var(--border)' },
-          '.cm-search': { padding: '8px 12px', font: '12px var(--font-ui)' },
-          '.cm-textfield': {
-            border: '1px solid var(--border)',
-            borderRadius: '4px',
-            backgroundColor: 'var(--surface)',
-          },
-          '.cm-button': {
-            background: 'var(--hover)',
-            color: 'var(--text)',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '12px',
           },
         }),
       ],

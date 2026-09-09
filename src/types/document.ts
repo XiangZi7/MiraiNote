@@ -42,7 +42,7 @@ export interface DocumentTab {
 }
 
 export const defaultPosition = (): ReadingPosition => ({
-  mode: 'split',
+  mode: 'preview',
   ratio: 0.5,
   cursor: 0,
   scroll: 0,

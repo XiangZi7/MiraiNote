@@ -3,6 +3,7 @@ import { onMounted, onBeforeUnmount, useTemplateRef, watch } from 'vue'
 import { EditorView } from '@codemirror/view'
 import { createEditor, applyMarkdownAction } from '../services/editor'
 import type { MarkdownAction } from '../types'
+import { editorSearchTarget } from '../services/search'
 
 const props = defineProps<{ content: string; cursor: number; scroll: number }>()
 const emit = defineEmits<{
@@ -33,8 +34,12 @@ watch(
       })
   }
 )
-onBeforeUnmount(() => editor?.destroy())
+onBeforeUnmount(() => {
+  editor?.destroy()
+  editor = undefined
+})
 defineExpose({
+  ...editorSearchTarget(() => editor),
   action: (action: MarkdownAction) => {
     if (editor) applyMarkdownAction(editor, action)
   },

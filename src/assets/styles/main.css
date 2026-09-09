@@ -107,6 +107,26 @@
 .fade-leave-active {
   transition: opacity 150ms;
 }
+
+::highlight(document-find) {
+  color: var(--search-ink);
+  background-color: var(--search-match);
+}
+::highlight(document-find-active) {
+  color: var(--search-ink);
+  background-color: var(--search-active);
+  text-decoration: underline;
+}
+.document-find-match,
+.document-find-active {
+  color: var(--search-ink);
+  background-color: var(--search-match);
+  border-radius: 2px;
+}
+.document-find-active {
+  background-color: var(--search-active);
+  box-shadow: 0 0 0 1px var(--search-active);
+}
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;

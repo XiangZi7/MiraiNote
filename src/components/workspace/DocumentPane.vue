@@ -38,7 +38,7 @@ const dropEdge = computed(() =>
 
 <template>
   <section
-    class="document-pane bg-surface flex size-full min-h-0 min-w-0 flex-col"
+    class="document-pane bg-surface isolate flex size-full min-h-0 min-w-0 flex-col"
     :class="{ focused: workspace.activePaneId === pane.id }"
     aria-label="文档面板"
     :data-pane-id="pane.id"

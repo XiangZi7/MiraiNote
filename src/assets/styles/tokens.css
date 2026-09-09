@@ -17,6 +17,11 @@
   --accent-soft: #e9eff7;
   --danger: #c24c52;
   --shadow: 0 12px 44px #1e293b1a, 0 2px 8px #1e293b0a;
+  --search-match: #f8e8a0;
+  --search-active: #efbb51;
+  --search-ink: #45300c;
+  --z-document-outline: 10;
+  --z-document-search: 20;
   --font-ui: 'Inter', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'Microsoft YaHei UI', monospace;
 }
@@ -40,4 +45,7 @@
   --accent-soft: #303e52;
   --danger: #f1858a;
   --shadow: 0 12px 44px #0005, 0 2px 8px #0003;
+  --search-match: #655429;
+  --search-active: #b7832d;
+  --search-ink: #fff4d6;
 }

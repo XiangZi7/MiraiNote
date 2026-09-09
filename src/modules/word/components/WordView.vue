@@ -1,14 +1,5 @@
 <script setup lang="ts">
-import {
-  reactive,
-  toRefs,
-  computed,
-  useTemplateRef,
-  onMounted,
-  onBeforeUnmount,
-  nextTick,
-  watch,
-} from 'vue'
+import { computed, useTemplateRef, onMounted, nextTick, watch } from 'vue'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import { TableKit } from '@tiptap/extension-table'
@@ -19,40 +10,47 @@ import { useWorkspaceStore } from '@/stores/workspace'
 import { useDocumentActions } from '@/composables/useDocumentActions'
 import WordToolbar from './WordToolbar.vue'
 import DocxPreview from './DocxPreview.vue'
-import { IconButton, AppIcon } from '@/components/ui'
+import DocumentSearchBar from '@/components/search/DocumentSearchBar.vue'
+import { useDocumentSearch } from '@/composables/useDocumentSearch'
+import { useDomTextSearch } from '@/composables/useDomTextSearch'
 import type { DocumentRecord, DocumentTab } from '@/types/document'
 
 const props = defineProps<{ document: DocumentRecord; tab: DocumentTab }>()
 const documents = useDocumentsStore(),
   workspace = useWorkspaceStore(),
   actions = useDocumentActions()
-// 响应式状态
-const state = reactive({
-  // 编辑模式由 Tiptap 接管
-  editing: false,
-  // 文档内搜索显示状态
-  searching: false,
-  // 当前查找内容
-  query: '',
+const editing = computed({
+  get: () => props.tab.position.mode === 'edit',
+  set: value => {
+    props.tab.position.mode = value ? 'edit' : 'preview'
+  },
 })
-const { editing, searching, query } = toRefs(state)
 const viewport = useTemplateRef('viewport'),
-  searchInput = useTemplateRef('search')
+  searchBar = useTemplateRef('searchBar')
 const originalPreview = computed(
   () =>
     props.document.assetId &&
-    !state.editing &&
+    !editing.value &&
     props.document.content === props.document.originalContent
 )
-const matchCount = computed(() =>
-  state.query
-    ? props.document.text.toLowerCase().split(state.query.toLowerCase())
-        .length - 1
-    : 0
-)
+const searchRoot = () =>
+  viewport.value?.querySelector<HTMLElement>(
+    originalPreview.value ? '[aria-label="Word 原始排版预览"]' : '.tiptap'
+  ) ?? null
+const searchTarget = useDomTextSearch(searchRoot, viewport)
+const search = useDocumentSearch({
+  target: () => searchTarget,
+  active: () => workspace.activeTab?.id === props.tab.id && !workspace.library,
+  revision: () => [
+    props.document.content,
+    editing.value,
+    originalPreview.value,
+  ],
+  focusInput: () => searchBar.value?.focus(),
+})
 const editor = useEditor({
   content: DOMPurify.sanitize(props.document.content),
-  editable: false,
+  editable: editing.value,
   extensions: [
     StarterKit,
     TableKit.configure({ table: { resizable: true } }),
@@ -69,10 +67,7 @@ const editor = useEditor({
   onUpdate: ({ editor }) =>
     documents.update(props.document.id, editor.getHTML(), editor.getText()),
 })
-watch(
-  () => state.editing,
-  editable => editor.value?.setEditable(editable)
-)
+watch(editing, editable => editor.value?.setEditable(editable))
 watch(
   () => props.document.content,
   value => {
@@ -83,7 +78,7 @@ watch(
   }
 )
 async function format(command: string, value?: string) {
-  state.editing = true
+  editing.value = true
   await nextTick()
   const chain = editor.value?.chain().focus()
   if (!chain) return
@@ -107,29 +102,11 @@ async function format(command: string, value?: string) {
   }
   actions[command]?.()
 }
-async function find() {
-  if (workspace.activeTab?.id !== props.tab.id) return
-  state.searching = !state.searching
-  await nextTick()
-  searchInput.value?.focus()
-}
-function findNext() {
-  if (!state.query || !viewport.value) return
-  const target = Array.from(
-    viewport.value.querySelectorAll('p, h1, h2, li, td')
-  ).find(node =>
-    node.textContent?.toLowerCase().includes(state.query.toLowerCase())
-  )
-  target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-}
 function restoreScroll() {
   if (viewport.value) viewport.value.scrollTop = props.tab.position.scroll
+  search.refresh(false, true)
 }
-onMounted(() => {
-  restoreScroll()
-  window.addEventListener('mirai:find', find)
-})
-onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
+onMounted(restoreScroll)
 </script>
 
 <template>
@@ -140,30 +117,22 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
       @editing="editing = $event"
       @zoom="tab.position.zoom = $event"
       @format="format"
-      @find="find"
+      @find="search.open"
       @save="actions.save"
     />
-    <div
-      v-if="searching"
-      class="word-search bg-canvas [&>span]:text-muted flex items-center gap-2.5 px-5 py-2 [&>input]:flex-1 [&>input]:border-0 [&>input]:bg-transparent [&>input]:outline-none [&>span]:text-[11px]"
-    >
-      <AppIcon name="lucide:search" /><input
-        ref="search"
-        v-model="query"
-        placeholder="在文档中查找…"
-        aria-label="搜索 Word 内容"
-        @keydown.enter="findNext"
-      /><span>{{ query ? `${matchCount} 处匹配` : '' }}</span
-      ><IconButton
-        icon="lucide:arrow-down"
-        label="跳转到匹配内容"
-        @click="findNext"
-      /><IconButton
-        icon="lucide:x"
-        label="关闭查找"
-        @click="searching = false"
-      />
-    </div>
+    <DocumentSearchBar
+      v-if="search.state.open"
+      ref="searchBar"
+      v-model:query="search.state.query"
+      v-model:case-sensitive="search.state.caseSensitive"
+      v-model:whole-word="search.state.wholeWord"
+      :total="search.state.total"
+      :current="search.current.value"
+      label="搜索 Word 内容"
+      @close="search.close"
+      @next="search.move(1)"
+      @previous="search.move(-1)"
+    />
     <div
       class="word-ruler border-line bg-canvas text-faint [&>span]:after:bg-faint flex h-[26px] shrink-0 items-center justify-center gap-[29px] overflow-hidden border-b text-[9px] [&>span]:relative [&>span]:after:absolute [&>span]:after:-bottom-[5px] [&>span]:after:left-1/2 [&>span]:after:h-1 [&>span]:after:w-px"
     >
@@ -175,6 +144,8 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
     </div>
     <div
       ref="viewport"
+      tabindex="0"
+      aria-label="Word 文档阅读区域"
       class="word-viewport bg-sidebar flex-1 overflow-auto px-10 py-[30px]"
       @scroll="tab.position.scroll = ($event.target as HTMLElement).scrollTop"
     >

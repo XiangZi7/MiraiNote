@@ -18,13 +18,13 @@ import { useWorkspaceStore } from '@/stores/workspace'
 import { useSettingsStore } from '@/stores/settings'
 import PdfPagesViewport from './PdfPagesViewport.vue'
 import PdfThumbnails from './PdfThumbnails.vue'
+import PdfNavigationPanel from './PdfNavigationPanel.vue'
 import type { PdfPageSize } from '../types'
 import {
   AppToolbar,
   ToolbarSeparator,
   IconButton,
   AppIcon,
-  ResizeHandle,
 } from '@/components/ui'
 import PdfCanvas from './PdfCanvas.vue'
 import type { DocumentRecord, DocumentTab } from '@/types/document'
@@ -41,6 +41,18 @@ const pageSizes = shallowRef<PdfPageSize[]>([])
 const pdf = shallowRef<PDFDocumentProxy>()
 const outline = shallowRef<PdfOutlineEntry[]>([])
 const outlineError = shallowRef('这份 PDF 没有书签目录')
+const activeOutline = computed(() => {
+  let active: PdfOutlineEntry | undefined
+  for (const entry of outline.value) {
+    if (
+      entry.page &&
+      entry.page <= props.tab.position.page &&
+      (!active?.page || entry.page >= active.page)
+    )
+      active = entry
+  }
+  return active?.id ?? ''
+})
 const viewport = useTemplateRef('viewport'),
   input = useTemplateRef('search')
 // 响应式状态
@@ -256,21 +268,22 @@ onBeforeUnmount(() => {
       v-else
       class="relative flex min-h-0 flex-1"
     >
-      <template v-if="thumbnails">
-        <PdfThumbnails
-          :pdf="pdf"
-          :sizes="pageSizes"
-          :width="navigationWidth"
-          :page="tab.position.page"
-          @select="go"
-        />
-        <ResizeHandle
-          v-model="navigationWidth"
-          :min="120"
-          :max="360"
-          label="调整 PDF 缩略图栏宽度"
-        />
-      </template>
+      <PdfNavigationPanel
+        v-if="thumbnails"
+        v-model:width="navigationWidth"
+        :pages="pdf.numPages"
+        @close="thumbnails = false"
+      >
+        <template #default="{ width }">
+          <PdfThumbnails
+            :pdf="pdf"
+            :sizes="pageSizes"
+            :width="width"
+            :page="tab.position.page"
+            @select="go"
+          />
+        </template>
+      </PdfNavigationPanel>
       <PdfPagesViewport
         ref="viewport"
         :sizes="pageSizes"
@@ -289,6 +302,7 @@ onBeforeUnmount(() => {
       </PdfPagesViewport>
       <DocumentOutline
         :items="outline"
+        :active-id="activeOutline"
         :empty-text="outlineError"
         @select="goOutline"
       />

@@ -58,6 +58,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const root = ref<LayoutNode>(loadJson('layout', initial, validLayout))
   for (const pane of panesOf(root.value)) {
     pane.tabs = pane.tabs.filter(tab => documents.get(tab.documentId))
+    for (const tab of pane.tabs) tab.position.mode = 'preview'
     if (!pane.tabs.some(tab => tab.id === pane.activeTabId))
       pane.activeTabId = pane.tabs[0]?.id ?? null
   }
@@ -114,11 +115,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         documentId,
         pinned: false,
         position: validReadingPosition(doc.lastPosition)
-          ? { ...doc.lastPosition }
+          ? { ...doc.lastPosition, mode: 'preview' }
           : defaultPosition(),
       }
       pane.tabs.push(tab)
     }
+    tab.position.mode = 'preview'
     activate(pane.id, tab.id)
     doc.openedAt = new Date().toISOString()
   }
@@ -153,8 +155,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (!tab || !documents.get(tab.documentId)) return
     const pane = activePane.value
     const existing = pane.tabs.find(item => item.documentId === tab.documentId)
-    if (existing) activate(pane.id, existing.id)
-    else {
+    if (existing) {
+      existing.position.mode = 'preview'
+      activate(pane.id, existing.id)
+    } else {
+      tab.position.mode = 'preview'
       pane.tabs.push(tab)
       activate(pane.id, tab.id)
     }
@@ -221,7 +226,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       ? {
           ...original,
           id: crypto.randomUUID(),
-          position: { ...original.position },
+          position: { ...original.position, mode: 'preview' as const },
         }
       : detach(source, tabId)!
     const pane = emptyPane()

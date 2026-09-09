@@ -44,7 +44,7 @@ onMounted(async () => {
 <template>
   <aside
     v-bind="containerProps"
-    class="bg-inspector min-h-0 shrink-0 overflow-x-hidden overflow-y-auto"
+    class="bg-editor min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
     :style="{ width: `${width}px` }"
     aria-label="PDF 缩略图"
   >

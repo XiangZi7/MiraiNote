@@ -23,24 +23,35 @@
 
 颜色以 `src/assets/styles/tokens.css` 为唯一来源。Dark / Light / System 使用同一语义变量体系。没有底部 Status Bar。截图中 Inspector 为展开状态，但初始状态遵循文字要求收起。
 
+文档新建、打开、关闭后恢复、启动时恢复工作区以及复制分屏时，默认进入预览；阅读位置和缩放继续保留。只有明确选择编辑、分屏或格式操作时才进入编辑状态。
+
+文内查找栏位于工具栏下方，预览和编辑共用入口，按 `Ctrl+F` 打开或重新聚焦。支持大小写、全词匹配、循环跳转、`Enter / Shift+Enter` 和 `Esc`；Markdown 编辑模式提供替换。预览高亮使用 CSS Highlight，不改动文档 DOM；编辑器使用 CodeMirror decorations。每个文档面板隔离层叠上下文，目录和 PDF 缩略图使用层级 10，查找栏使用层级 20，全局对话框和菜单仍在其上方。
+
+右侧目录和 PDF 左侧缩略图均使用绝对定位，展开、收起及调整缩略图宽度时，正文阅读区域的尺寸与位置不变。浮层使用 12px 圆角、语义表面色和统一阴影；目录提供标题层级、当前章节标记、空状态与键盘导航。
+
 ## 组件与状态边界
 
-| 组件          | 单一职责 / 输入与事件                                           |
-| ------------- | --------------------------------------------------------------- |
-| AppShell      | 组装 Header / Sidebar / Workspace / 面板 / 浮层                 |
-| AppHeader     | 文档标题、搜索、导出、菜单、窗口控制                            |
-| Sidebar       | 工作区入口、类型筛选、最近、收藏；导航交给 workspace store      |
-| ResizeHandle  | `modelValue / min / max / axis`，发出尺寸更新                   |
-| WorkspaceNode | 接收 LayoutNode，递归渲染分割与 Pane                            |
-| DocumentPane  | 接收 PaneNode，挂载活动文档，处理拖入区域                       |
-| TabBar        | 接收 PaneNode，发出激活、关闭、排序、分屏动作                   |
-| MarkdownView  | 接收 Document，通过 Store 读写；独立 Editor / Preview / Toolbar |
-| PdfView       | 独立页面阅读、缩略图、目录与工具栏                              |
-| WordView      | 独立富文本页面和格式工具栏                                      |
-| Inspector     | 接收当前 Document，展示属性、标签、收藏                         |
-| SearchPalette | 统一键盘导航；文件搜索与命令模式                                |
-| ContextMenu   | 接收菜单项与位置；统一焦点、越界约束和关闭行为                  |
-| AiPanel       | 当前文档、Pane、Tab 上下文及 AI 操作入口                        |
+| 组件               | 单一职责 / 输入与事件                                            |
+| ------------------ | ---------------------------------------------------------------- |
+| AppShell           | 组装 Header / Sidebar / Workspace / 面板 / 浮层                  |
+| AppHeader          | 文档标题、搜索、导出、菜单、窗口控制                             |
+| Sidebar            | 工作区入口、类型筛选、最近、收藏；导航交给 workspace store       |
+| ResizeHandle       | `modelValue / min / max / axis`，发出尺寸更新                    |
+| WorkspaceNode      | 接收 LayoutNode，递归渲染分割与 Pane                             |
+| DocumentPane       | 接收 PaneNode，挂载活动文档，处理拖入区域                        |
+| TabBar             | 接收 PaneNode，发出激活、关闭、排序、分屏动作                    |
+| MarkdownView       | 接收 Document，通过 Store 读写；独立 Editor / Preview / Toolbar  |
+| PdfView            | 独立页面阅读、缩略图、目录与工具栏                               |
+| WordView           | 独立富文本页面和格式工具栏                                       |
+| Inspector          | 接收当前 Document，展示属性、标签、收藏                          |
+| SearchPalette      | 统一键盘导航；文件搜索与命令模式                                 |
+| DocumentSearchBar  | 接收查询、选项和计数，发出跳转、关闭和替换事件；呈现文内查找控件 |
+| useDocumentSearch  | 管理当前面板的查询、快捷键、结果位置和渲染器初始化后的刷新       |
+| useDomTextSearch   | 为预览建立文本索引、生成跨内联节点的高亮并在当前阅读区域定位     |
+| DocumentOutline    | 接收章节列表与当前章节，发出章节选择事件；呈现悬浮目录           |
+| PdfNavigationPanel | 接收页数和宽度，提供悬浮缩略图容器与宽度调整                     |
+| ContextMenu        | 接收菜单项与位置；统一焦点、越界约束和关闭行为                   |
+| AiPanel            | 当前文档、Pane、Tab 上下文及 AI 操作入口                         |
 
 Document 内容与 Tab 分离：同一文档可在不同 Pane 显示，内容只有一个真源。LayoutNode 是递归的 Pane / Split 联合类型。视图位置按 Tab 保存。业务组件通过 Store / Composable 调用 API，禁止直接 invoke。
 

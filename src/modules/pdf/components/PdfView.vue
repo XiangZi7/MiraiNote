@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AppToolbar, ToolbarSeparator, ResizeHandle } from '@/components/ui'
+import { AppToolbar, ToolbarSeparator } from '@/components/ui'
 import {
   computed,
   reactive,
@@ -16,6 +16,7 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 import PdfPage from './PdfPage.vue'
 import PdfFileView from './PdfFileView.vue'
 import PdfPagesViewport from './PdfPagesViewport.vue'
+import PdfNavigationPanel from './PdfNavigationPanel.vue'
 import DocumentOutline from '@/components/workspace/DocumentOutline.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { examplePages } from '../services/example-pages'
@@ -31,9 +32,8 @@ const navigationWidth = computed({
   },
 })
 const pageSizes = examplePages.map(() => ({ width: 595, height: 842 }))
-const thumbnailScale = computed(() =>
-  Math.min((navigationWidth.value - 48) / 595, 320 / 842)
-)
+const thumbnailScale = (width: number) =>
+  Math.min((width - 48) / 595, 320 / 842)
 // 响应式状态
 const state = reactive({
   // 左侧导航方式
@@ -210,57 +210,47 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
       />
     </div>
     <div class="pdf-body relative flex min-h-0 flex-1">
-      <aside
+      <PdfNavigationPanel
         v-if="navigation !== 'hidden'"
-        class="pdf-navigation bg-inspector shrink-0 overflow-x-hidden overflow-y-auto"
-        :style="{ width: `${navigationWidth}px` }"
-        aria-label="PDF 页面导航"
+        v-model:width="navigationWidth"
+        :pages="examplePages.length"
+        @close="navigation = 'hidden'"
       >
-        <div
-          class="navigation-modes bg-inspector sticky top-0 z-1 flex justify-center gap-3 p-3"
-        >
-          <IconButton
-            icon="lucide:layout-grid"
-            label="缩略图"
-            :active="navigation === 'thumbnails'"
-            @click="navigation = 'thumbnails'"
-          />
-        </div>
-        <div class="thumbnails grid justify-center gap-4 px-2.5 pt-1 pb-6">
-          <button
-            v-for="item in matches"
-            :key="item.number"
-            class="thumbnail group text-muted [&.selected]:text-accent flex flex-col items-center gap-2 text-[11px]"
-            :class="{ selected: tab.position.page === item.number }"
-            :aria-label="`第 ${item.number} 页`"
-            @click="go(item.number)"
+        <template #default="{ width }">
+          <div
+            class="thumbnails grid justify-center gap-4 overflow-y-auto px-2.5 pt-4 pb-6"
           >
-            <div
-              class="thumbnail-paper group-[.selected]:border-accent relative border-2 border-transparent shadow-sm"
-              :style="{
-                width: `${595 * thumbnailScale + 4}px`,
-                height: `${842 * thumbnailScale + 4}px`,
-              }"
+            <button
+              v-for="item in matches"
+              :key="item.number"
+              class="thumbnail group text-muted [&.selected]:text-accent flex flex-col items-center gap-2 text-[11px]"
+              :class="{ selected: tab.position.page === item.number }"
+              :aria-label="`第 ${item.number} 页`"
+              :aria-current="
+                tab.position.page === item.number ? 'page' : undefined
+              "
+              @click="go(item.number)"
             >
-              <PdfPage
-                :page="item.number"
+              <div
+                class="thumbnail-paper group-[.selected]:border-accent relative border-2 border-transparent shadow-sm"
                 :style="{
-                  transform: `scale(${thumbnailScale})`,
-                  transformOrigin: 'top left',
+                  width: `${595 * thumbnailScale(width) + 4}px`,
+                  height: `${842 * thumbnailScale(width) + 4}px`,
                 }"
-              />
-            </div>
-            <span>{{ item.number }}</span>
-          </button>
-        </div>
-      </aside>
-      <ResizeHandle
-        v-if="navigation !== 'hidden'"
-        v-model="navigationWidth"
-        :min="120"
-        :max="360"
-        label="调整 PDF 缩略图栏宽度"
-      />
+              >
+                <PdfPage
+                  :page="item.number"
+                  :style="{
+                    transform: `scale(${thumbnailScale(width)})`,
+                    transformOrigin: 'top left',
+                  }"
+                />
+              </div>
+              <span>{{ item.number }}</span>
+            </button>
+          </div>
+        </template>
+      </PdfNavigationPanel>
       <PdfPagesViewport
         ref="viewport"
         :sizes="pageSizes"
@@ -282,6 +272,7 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
       </PdfPagesViewport>
       <DocumentOutline
         :items="outline"
+        :active-id="String(tab.position.page)"
         @select="go(Number($event))"
       />
     </div>

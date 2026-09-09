@@ -5,7 +5,7 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 import { useOverlaysStore } from '@/stores/overlays'
 import type { MarkdownMode } from '@/types/document'
 import type { MarkdownAction } from '../types'
-defineProps<{ mode: MarkdownMode }>()
+defineProps<{ mode: MarkdownMode; searching?: boolean }>()
 const emit = defineEmits<{
   mode: [mode: MarkdownMode]
   action: [action: MarkdownAction]
@@ -74,12 +74,18 @@ function heading(event: MouseEvent) {
     <SegmentedControl
       :model-value="mode"
       :options="[
+        { label: '预览', value: 'preview' },
         { label: '编辑', value: 'edit' },
-        { label: '阅读', value: 'preview' },
         { label: '分屏', value: 'split' },
       ]"
       label="Markdown 模式"
       @update:model-value="emit('mode', $event)"
+    />
+    <IconButton
+      icon="lucide:search"
+      label="在文档中查找 (Ctrl+F)"
+      :active="searching"
+      @click="emit('action', 'find')"
     />
     <ToolbarSeparator />
     <button

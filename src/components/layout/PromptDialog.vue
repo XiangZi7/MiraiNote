@@ -31,7 +31,7 @@ async function submit() {
       <label class="text-secondary block text-xs leading-6"
         >{{ overlays.state.prompt.label
         }}<TextInput
-          v-if="!overlays.state.prompt.danger"
+          v-if="overlays.state.prompt.input ?? !overlays.state.prompt.danger"
           v-model="value"
           class="mt-2"
           autofocus

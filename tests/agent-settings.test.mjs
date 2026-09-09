@@ -58,4 +58,21 @@ test('IPC save payload snapshots configuration and leaves UI-only metadata out',
   assert.equal(input.config.model, 'model-id')
   assert.equal('hasApiKey' in input.config, false)
   assert.equal('clearKey' in input.config, false)
+  assert.equal('revealed' in input.config, false)
+})
+
+test('a revealed key is only resent after the user edits it', () => {
+  const draft = {
+    ...newAgentProfile(),
+    id: 'profile',
+    model: 'model-id',
+    hasApiKey: true,
+    apiKey: 'saved-test-key',
+    revealed: 'saved-test-key',
+  }
+  // Untouched means "keep the stored key", so changing baseUrl still demands a fresh key.
+  assert.equal(profileInput(draft).config.apiKey, '')
+  draft.apiKey = 'saved-test-key-edited'
+  assert.equal(profileInput(draft).config.apiKey, 'saved-test-key-edited')
+  assert.equal(editAgentProfile({ ...draft, id: 'profile' }).revealed, '')
 })

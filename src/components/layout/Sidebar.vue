@@ -2,14 +2,20 @@
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useSettingsStore } from '@/stores/settings'
 import { useOverlaysStore } from '@/stores/overlays'
+import { useFoldersStore } from '@/stores/folders'
 import { useDocumentActions } from '@/composables/useDocumentActions'
+import { fileSystemApi } from '@/api/ipc/filesystem'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import IconButton from '@/components/ui/IconButton.vue'
 import type { LibraryFilter } from '@/types/workspace'
 
 const workspace = useWorkspaceStore()
 const settings = useSettingsStore()
 const overlays = useOverlaysStore()
+const folders = useFoldersStore()
 const actions = useDocumentActions()
+const navItem =
+  'nav-item hover:bg-hover [&.selected]:bg-selected [&>svg]:text-secondary my-px flex h-9 w-full items-center gap-3 rounded-md px-[11px] text-left text-[13px] whitespace-nowrap transition-colors duration-150 group-[.collapsed]:justify-center group-[.collapsed]:px-0 group-[.collapsed]:[&>span:not(.nav-icon)]:hidden'
 const sections: {
   label: string
   icon: string
@@ -39,8 +45,20 @@ function selector(event: MouseEvent) {
     },
     {
       label: '导入文档…',
-      icon: 'lucide:folder-open',
+      icon: 'lucide:file-input',
+      shortcut: 'Ctrl O',
       action: actions.openFiles,
+    },
+    {
+      label: '打开文件夹…',
+      icon: 'lucide:folder-open',
+      shortcut: 'Ctrl ⇧ O',
+      action: () => actions.openFolder(),
+    },
+    {
+      label: '导入整个文件夹…',
+      icon: 'lucide:import',
+      action: () => actions.importFolder(),
     },
   ])
 }
@@ -68,10 +86,12 @@ function selector(event: MouseEvent) {
         class="trailing ml-auto group-[.collapsed]:hidden"
       />
     </button>
-    <nav aria-label="文档导航">
+    <nav
+      class="min-h-0 overflow-y-auto"
+      aria-label="文档导航"
+    >
       <button
-        class="nav-item hover:bg-hover [&.selected]:bg-selected [&>svg]:text-secondary my-px flex h-9 w-full items-center gap-3 rounded-md px-[11px] text-left text-[13px] whitespace-nowrap transition-colors duration-150 group-[.collapsed]:justify-center group-[.collapsed]:px-0 group-[.collapsed]:[&>span:not(.nav-icon)]:hidden"
-        :class="{ selected: workspace.library === 'recent' }"
+        :class="[navItem, { selected: workspace.library === 'recent' }]"
         title="最近打开"
         @click="workspace.library = 'recent'"
       >
@@ -81,8 +101,7 @@ function selector(event: MouseEvent) {
         /><span>最近打开</span>
       </button>
       <button
-        class="nav-item hover:bg-hover [&.selected]:bg-selected [&>svg]:text-secondary my-px flex h-9 w-full items-center gap-3 rounded-md px-[11px] text-left text-[13px] whitespace-nowrap transition-colors duration-150 group-[.collapsed]:justify-center group-[.collapsed]:px-0 group-[.collapsed]:[&>span:not(.nav-icon)]:hidden"
-        :class="{ selected: workspace.library === 'favorites' }"
+        :class="[navItem, { selected: workspace.library === 'favorites' }]"
         title="收藏"
         @click="workspace.library = 'favorites'"
       >
@@ -91,6 +110,53 @@ function selector(event: MouseEvent) {
           :size="18"
         /><span>收藏</span>
       </button>
+      <template v-if="fileSystemApi.isDesktop() || folders.folders.length">
+        <div
+          class="section-label text-muted flex items-center justify-between px-[9px] pt-[23px] pb-[5px] text-xs group-[.collapsed]:h-[25px] group-[.collapsed]:p-0 group-[.collapsed]:text-[0px]"
+        >
+          <span>文件夹</span
+          ><IconButton
+            icon="lucide:folder-plus"
+            label="打开文件夹 (Ctrl+Shift+O)"
+            class="-my-1 group-[.collapsed]:hidden"
+            @click="actions.openFolder()"
+          />
+        </div>
+        <button
+          v-for="folder in folders.folders"
+          :key="folder.path"
+          :class="[
+            navItem,
+            { selected: workspace.libraryFolder === folder.path },
+          ]"
+          :title="folder.path"
+          @click="actions.showFolder(folder.path)"
+          @contextmenu.prevent.stop="
+            overlays.menu($event, actions.folderMenu(folder))
+          "
+        >
+          <AppIcon
+            :name="
+              folders.scanning === folder.path
+                ? 'lucide:loader-circle'
+                : 'lucide:folder'
+            "
+            :size="18"
+            :class="{ 'animate-spin': folders.scanning === folder.path }"
+          /><span class="truncate">{{ folder.name }}</span>
+        </button>
+        <button
+          v-if="!folders.folders.length"
+          :class="navItem"
+          title="打开文件夹，按需阅读其中的文档"
+          @click="actions.openFolder()"
+        >
+          <AppIcon
+            name="lucide:folder-plus"
+            :size="18"
+          /><span class="text-muted">打开文件夹…</span>
+        </button>
+      </template>
       <div
         class="section-label text-muted px-[9px] pt-[23px] pb-[5px] text-xs group-[.collapsed]:h-[25px] group-[.collapsed]:p-0 group-[.collapsed]:text-[0px]"
       >
@@ -99,12 +165,14 @@ function selector(event: MouseEvent) {
       <button
         v-for="item in sections"
         :key="item.filter"
-        class="nav-item hover:bg-hover [&.selected]:bg-selected [&>svg]:text-secondary my-px flex h-9 w-full items-center gap-3 rounded-md px-[11px] text-left text-[13px] whitespace-nowrap transition-colors duration-150 group-[.collapsed]:justify-center group-[.collapsed]:px-0 group-[.collapsed]:[&>span:not(.nav-icon)]:hidden"
-        :class="{
-          selected:
-            workspace.library === item.filter ||
-            (workspace.library === null && item.filter === 'all'),
-        }"
+        :class="[
+          navItem,
+          {
+            selected:
+              workspace.library === item.filter ||
+              (workspace.library === null && item.filter === 'all'),
+          },
+        ]"
         :title="item.label"
         @click="workspace.library = item.filter"
       >
@@ -123,7 +191,7 @@ function selector(event: MouseEvent) {
     </nav>
     <div class="sidebar-bottom mt-auto pt-[30px]">
       <button
-        class="nav-item hover:bg-hover [&.selected]:bg-selected [&>svg]:text-secondary my-px flex h-9 w-full items-center gap-3 rounded-md px-[11px] text-left text-[13px] whitespace-nowrap transition-colors duration-150 group-[.collapsed]:justify-center group-[.collapsed]:px-0 group-[.collapsed]:[&>span:not(.nav-icon)]:hidden"
+        :class="navItem"
         title="设置"
         @click="overlays.state.settings = true"
       >
@@ -133,7 +201,7 @@ function selector(event: MouseEvent) {
         /><span>设置</span>
       </button>
       <button
-        class="nav-item hover:bg-hover [&.selected]:bg-selected [&>svg]:text-secondary my-px flex h-9 w-full items-center gap-3 rounded-md px-[11px] text-left text-[13px] whitespace-nowrap transition-colors duration-150 group-[.collapsed]:justify-center group-[.collapsed]:px-0 group-[.collapsed]:[&>span:not(.nav-icon)]:hidden"
+        :class="navItem"
         title="帮助"
         @click="overlays.state.help = true"
       >

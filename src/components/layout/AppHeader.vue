@@ -37,9 +37,15 @@ function more(event: MouseEvent) {
     },
     {
       label: '打开文件…',
-      icon: 'lucide:folder-open',
+      icon: 'lucide:file-input',
       shortcut: 'Ctrl O',
       action: actions.openFiles,
+    },
+    {
+      label: '打开文件夹…',
+      icon: 'lucide:folder-open',
+      shortcut: 'Ctrl ⇧ O',
+      action: () => actions.openFolder(),
     },
     {
       label: '保存工作区草稿',

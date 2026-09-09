@@ -2,17 +2,20 @@
 import { computed, shallowRef } from 'vue'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useDocumentsStore } from '@/stores/documents'
+import { useFoldersStore } from '@/stores/folders'
 import { useOverlaysStore } from '@/stores/overlays'
 import { useDocumentActions } from '@/composables/useDocumentActions'
+import { fileSystemApi } from '@/api/ipc/filesystem'
 import { documentTypes, formatSize, formatDate } from '@/utils/documents'
 import { AppIcon, AppButton, IconButton } from '@/components/ui'
-import type { LibraryFilter } from '@/types/workspace'
+import type { LibrarySection } from '@/types/workspace'
 const workspace = useWorkspaceStore()
 const documents = useDocumentsStore()
+const folders = useFoldersStore()
 const overlays = useOverlaysStore()
 const actions = useDocumentActions()
 const query = shallowRef('')
-const titles: Record<LibraryFilter, string> = {
+const titles: Record<LibrarySection, string> = {
   all: '全部文档',
   recent: '最近打开',
   favorites: '收藏',
@@ -20,15 +23,36 @@ const titles: Record<LibraryFilter, string> = {
   pdf: 'PDF',
   word: 'Word',
 }
-const title = computed(() => titles[workspace.library ?? 'all'])
+const section = computed<LibrarySection>(() =>
+  workspace.library && !workspace.libraryFolder
+    ? (workspace.library as LibrarySection)
+    : 'all'
+)
+const title = computed(() => titles[section.value])
 const filtered = computed(() =>
   documents
-    .filtered(workspace.library ?? 'all')
+    .filtered(section.value)
     .filter(doc =>
       `${doc.name} ${doc.tags.join(' ')}`
         .toLowerCase()
         .includes(query.value.toLowerCase())
     )
+)
+const inWorkspace = computed(
+  () =>
+    new Set(
+      documents.documents
+        .map(doc => doc.sourcePath?.toLowerCase())
+        .filter((value): value is string => !!value)
+    )
+)
+// 已经从工作区移除、但最近打开过的磁盘文件，仍然可以一键载回。
+const detached = computed(() =>
+  section.value === 'recent'
+    ? folders.recent.filter(
+        item => !inWorkspace.value.has(item.path.toLowerCase())
+      )
+    : []
 )
 </script>
 
@@ -60,21 +84,50 @@ const filtered = computed(() =>
             </h1>
             <p class="text-muted mt-2 text-xs">
               {{
-                workspace.library === 'favorites'
+                section === 'favorites'
                   ? '留住值得反复阅读的内容。'
-                  : workspace.library === 'recent'
+                  : section === 'recent'
                     ? '接着上一次的思考，继续向前。'
                     : '让文档井然有序，让思考自由发生。'
               }}
             </p>
           </div>
-          <AppButton @click="actions.create"
-            ><AppIcon
-              name="lucide:plus"
-              :size="15"
-            />新建文档</AppButton
-          >
+          <div class="flex shrink-0 items-center gap-2">
+            <AppButton
+              variant="ghost"
+              @click="actions.openFolder()"
+              ><AppIcon
+                name="lucide:folder-open"
+                :size="15"
+              />打开文件夹</AppButton
+            ><AppButton @click="actions.create"
+              ><AppIcon
+                name="lucide:plus"
+                :size="15"
+              />新建文档</AppButton
+            >
+          </div>
         </div>
+        <template v-if="section === 'recent' && folders.folders.length">
+          <div class="text-muted mb-2.5 text-[11px]">最近打开的文件夹</div>
+          <div class="mb-8 flex flex-wrap gap-2">
+            <button
+              v-for="folder in folders.folders"
+              :key="folder.path"
+              class="border-line bg-canvas hover:bg-hover text-secondary flex max-w-[260px] items-center gap-2 rounded-md border px-3 py-2 text-xs transition-colors"
+              :title="folder.path"
+              @click="actions.showFolder(folder.path)"
+              @contextmenu.prevent.stop="
+                overlays.menu($event, actions.folderMenu(folder))
+              "
+            >
+              <AppIcon
+                name="lucide:folder"
+                :size="15"
+              /><span class="truncate">{{ folder.name }}</span>
+            </button>
+          </div>
+        </template>
         <div class="mb-5 flex items-center justify-between">
           <span class="text-muted text-xs">{{ filtered.length }} 份文档</span>
           <div class="text-muted flex items-center gap-2">
@@ -117,7 +170,7 @@ const filtered = computed(() =>
                 doc.name
               }}</span
               ><span class="text-muted mt-1 block truncate text-[11px]"
-                >{{ doc.tags.length ? doc.tags.join(' · ') : '工作区草稿'
+                >{{ doc.tags.length ? doc.tags.join(' · ') : doc.path
                 }}<span v-if="doc.source === 'example'"> · 示例</span></span
               ></span
             >
@@ -147,9 +200,7 @@ const filtered = computed(() =>
           class="text-muted flex flex-col items-center py-24"
         >
           <AppIcon
-            :name="
-              workspace.library === 'favorites' ? 'lucide:star' : 'lucide:files'
-            "
+            :name="section === 'favorites' ? 'lucide:star' : 'lucide:files'"
             :size="30"
             class="text-faint mb-5"
           />
@@ -164,16 +215,52 @@ const filtered = computed(() =>
             }}
           </p>
         </div>
-        <div class="text-muted mt-8 flex items-center gap-2 text-[11px]">
+        <template v-if="detached.length">
+          <div class="text-muted mt-9 mb-2.5 text-[11px]">
+            不在工作区的最近文件
+          </div>
+          <button
+            v-for="item in detached"
+            :key="item.path"
+            class="border-line/70 hover:bg-canvas flex w-full items-center gap-3.5 border-b px-3 py-3 text-left transition-colors"
+            :title="item.path"
+            @click="actions.reopenFile(item.path)"
+          >
+            <span
+              class="border-line bg-canvas text-secondary grid h-9 w-8 shrink-0 place-items-center rounded-md border"
+              ><AppIcon
+                :name="documentTypes[item.kind].icon"
+                :size="18" /></span
+            ><span class="min-w-0"
+              ><span class="block truncate text-[13px] font-medium">{{
+                item.name
+              }}</span
+              ><span class="text-muted mt-1 block truncate text-[11px]">{{
+                item.path
+              }}</span></span
+            ><AppIcon
+              name="lucide:rotate-ccw"
+              :size="15"
+              class="text-faint ml-auto shrink-0"
+            />
+          </button>
+        </template>
+        <div class="text-muted mt-8 flex items-center gap-3 text-[11px]">
           <AppIcon
             name="lucide:folder-open"
             :size="14"
-          /><span>示例工作区</span><span class="text-faint mx-1">·</span
-          ><button
+          /><button
             class="hover:text-accent"
             @click="actions.openFiles"
           >
-            导入本地文档
+            导入文档
+          </button>
+          <span class="text-faint">·</span>
+          <button
+            class="hover:text-accent"
+            @click="actions.importFolder()"
+          >
+            {{ fileSystemApi.isDesktop() ? '导入整个文件夹' : '导入文件夹' }}
           </button>
         </div>
       </div>

@@ -14,6 +14,7 @@
       exitDocuments: [],
       failStorage: false,
       launchFiles: window.initialLaunchFiles ?? [],
+      folder: window.initialFolder ?? null,
       documents() {
         return useDocumentsStore().documents
       },
@@ -46,6 +47,19 @@
         state.calls.push({ command, payload })
         if (command === 'desktop_take_launch_files')
           return state.launchFiles.splice(0)
+        if (command === 'files_pick_folder' || command === 'files_scan_folder')
+          return state.folder
+        if (command === 'files_stat')
+          return (state.folder?.entries ?? []).filter(entry =>
+            payload.paths.includes(entry.path)
+          )
+        if (command === 'files_read') {
+          const entry = (state.folder?.entries ?? []).find(
+            item => item.path === payload.path
+          )
+          if (!entry) throw new Error('文件或文件夹不存在，可能已被移动')
+          return new TextEncoder().encode(`# ${entry.name}\n\n正文。`)
+        }
         if (command === 'agent_get_settings')
           return { activeId: '', profiles: [] }
         if (command === 'desktop_finish_exit') {

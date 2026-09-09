@@ -18,9 +18,20 @@ export function useCommands(): MenuItem[] {
     },
     {
       label: '打开文档',
-      icon: 'lucide:folder-open',
+      icon: 'lucide:file-input',
       shortcut: 'Ctrl O',
       action: actions.openFiles,
+    },
+    {
+      label: '打开文件夹',
+      icon: 'lucide:folder-open',
+      shortcut: 'Ctrl ⇧ O',
+      action: () => actions.openFolder(),
+    },
+    {
+      label: '导入整个文件夹',
+      icon: 'lucide:import',
+      action: () => actions.importFolder(),
     },
     {
       label: '搜索文档',

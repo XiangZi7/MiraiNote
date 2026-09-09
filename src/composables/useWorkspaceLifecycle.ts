@@ -4,6 +4,7 @@ import { useDocumentsStore } from '@/stores/documents'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useSettingsStore } from '@/stores/settings'
 import { useOverlaysStore } from '@/stores/overlays'
+import { useFoldersStore } from '@/stores/folders'
 import { useDocumentActions } from './useDocumentActions'
 import { useDesktopLifecycle } from './useDesktopLifecycle'
 import { useLaunchFiles } from './useLaunchFiles'
@@ -12,7 +13,8 @@ export function useWorkspaceLifecycle() {
   const documents = useDocumentsStore(),
     workspace = useWorkspaceStore(),
     settings = useSettingsStore(),
-    overlays = useOverlaysStore()
+    overlays = useOverlaysStore(),
+    folders = useFoldersStore()
   const actions = useDocumentActions()
   let stopped = false
   let storageError = false
@@ -26,6 +28,7 @@ export function useWorkspaceLifecycle() {
       documents.persist()
       workspace.persist()
       settings.persist()
+      folders.persist()
       storageError = false
     } catch {
       if (!storageError)
@@ -51,6 +54,8 @@ export function useWorkspaceLifecycle() {
       () => workspace.root,
       () => workspace.activePaneId,
       () => settings.settings,
+      () => folders.folders,
+      () => folders.recent,
     ],
     () => {
       if (!persisting) void schedule()
@@ -86,16 +91,18 @@ export function useWorkspaceLifecycle() {
     const action =
       event.shiftKey && key === 't'
         ? workspace.restore
-        : event.shiftKey && key === 'p'
-          ? () => {
-              overlays.state.palette = 'commands'
-            }
-          : event.shiftKey && key === 'b'
+        : event.shiftKey && key === 'o'
+          ? () => actions.openFolder()
+          : event.shiftKey && key === 'p'
             ? () => {
-                settings.settings.sidebarCollapsed =
-                  !settings.settings.sidebarCollapsed
+                overlays.state.palette = 'commands'
               }
-            : shortcuts[key]
+            : event.shiftKey && key === 'b'
+              ? () => {
+                  settings.settings.sidebarCollapsed =
+                    !settings.settings.sidebarCollapsed
+                }
+              : shortcuts[key]
     if (action) {
       event.preventDefault()
       void action()

@@ -13,6 +13,8 @@ import Sidebar from './Sidebar.vue'
 import Inspector from './Inspector.vue'
 import WorkspaceNode from '@/components/workspace/WorkspaceNode.vue'
 import DocumentLibrary from '@/components/workspace/DocumentLibrary.vue'
+import FolderLibrary from '@/components/workspace/FolderLibrary.vue'
+import { isSupportedName } from '@/utils/documents'
 const SearchPalette = defineAsyncComponent(
   () => import('@/components/search/SearchPalette.vue')
 )
@@ -37,12 +39,58 @@ function dragOver(event: DragEvent) {
     draggingFiles.value = true
   }
 }
+/** 递归展开拖入的文件夹；深度与文件类型限制和后端扫描保持一致。 */
+async function collect(entry: FileSystemEntry, out: File[], depth = 0) {
+  if (entry.isFile) {
+    const file = await new Promise<File | null>(resolve =>
+      (entry as FileSystemFileEntry).file(
+        result => resolve(result),
+        () => resolve(null)
+      )
+    )
+    if (!file || !isSupportedName(file.name)) return
+    // 保留相对路径，导入后工作区里仍能看出文件夹层级。
+    Object.defineProperty(file, 'webkitRelativePath', {
+      value: entry.fullPath.replace(/^\//, ''),
+    })
+    out.push(file)
+    return
+  }
+  if (depth >= 8) return
+  const reader = (entry as FileSystemDirectoryEntry).createReader()
+  for (;;) {
+    const batch = await new Promise<FileSystemEntry[]>(resolve =>
+      reader.readEntries(
+        result => resolve(result),
+        () => resolve([])
+      )
+    )
+    if (!batch.length) return
+    for (const child of batch) await collect(child, out, depth + 1)
+  }
+}
 async function drop(event: DragEvent) {
   draggingFiles.value = false
-  if (event.dataTransfer?.files.length) {
-    event.preventDefault()
-    await actions.importFiles(Array.from(event.dataTransfer.files))
+  const transfer = event.dataTransfer
+  if (!transfer?.items.length && !transfer?.files.length) return
+  event.preventDefault()
+  // webkitGetAsEntry 必须在 await 之前同步取出。
+  const entries = Array.from(transfer.items)
+    .map(item => item.webkitGetAsEntry?.() ?? null)
+    .filter((entry): entry is FileSystemEntry => !!entry)
+  if (entries.some(entry => entry.isDirectory)) {
+    const files: File[] = []
+    overlays.progress('正在读取拖入的文件夹…')
+    try {
+      for (const entry of entries) await collect(entry, files)
+    } finally {
+      overlays.progress(null)
+    }
+    await actions.importFiles(files, true)
+    return
   }
+  if (transfer.files.length)
+    await actions.importFiles(Array.from(transfer.files))
 }
 function context(event: MouseEvent) {
   if (
@@ -95,8 +143,11 @@ function context(event: MouseEvent) {
         label="调整侧栏宽度"
       />
       <main class="min-h-0 min-w-0 flex-1">
-        <DocumentLibrary
-          v-if="workspace.library"
+        <FolderLibrary
+          v-if="workspace.libraryFolder"
+          :key="workspace.libraryFolder"
+        /><DocumentLibrary
+          v-else-if="workspace.library"
           :key="workspace.library"
         /><WorkspaceNode
           v-else
@@ -146,7 +197,7 @@ function context(event: MouseEvent) {
         :size="36"
       /><span class="text-base font-medium">松开以导入文档</span
       ><span class="text-muted text-xs"
-        >Markdown · PDF · Word，可一次拖入多个文件</span
+        >Markdown · PDF · Word，可一次拖入多个文件或整个文件夹</span
       >
     </div>
   </div>

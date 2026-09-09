@@ -19,6 +19,24 @@
 
 双击 `.md` 文件会在 MiraiNote 中打开，支持含中文、空格的文件路径；程序已驻留时会恢复窗口并打开文件。重复打开同一文件会切换到已有草稿，保留未保存的修改。编辑仍保存到工作区，导出后才能另存文件。
 
+## 打开文件夹与批量导入
+
+侧栏顶部的工作区菜单、命令面板（Ctrl+Shift+P）和标题栏“更多操作”都提供三个入口：
+
+- **导入文档…**（Ctrl+O）：系统选择框多选 Markdown / PDF / DOCX；桌面端会记住文件真实路径。
+- **打开文件夹…**（Ctrl+Shift+O）：选中的文件夹出现在侧栏“文件夹”分组，递归列出其中的文档，点击某一份才读取内容。适合上百份文档的目录，不会一次性占满工作区草稿。
+- **导入整个文件夹…**：把文件夹里的全部文档一次性读入工作区；超过 40 份会先确认，导入过程有进度提示。
+
+也可以把文件或整个文件夹直接拖进窗口，拖入文件夹时只导入其中支持的文档。文件夹视图支持关键词筛选、按子目录分组、重新扫描、在资源管理器中显示；右键侧栏中的文件夹可以全部导入、重新扫描或从列表移除（不会删除磁盘文件）。
+
+扫描会跳过软链接、以 `.` 开头的隐藏项以及 `node_modules`、`target`、`dist` 等目录，最多向下 8 层、列出 2000 份文档，超过 50 MB 的文件会被跳过并在界面上说明。
+
+“最近打开”同时显示最近打开过的文件夹和最近的文档；已经从工作区移除但打开过的本地文件也会单独列出，点击即可重新载入。文件夹与最近记录保存在本机，重启后仍在。
+
+出于安全考虑，前端只能读取用户通过选择框选中的文件夹（及其子目录）或系统启动传入的文件；许可列表保存在应用数据目录的 `workspace-paths.json`，最多 128 条，其他路径的读取请求会被拒绝。
+
+## Markdown 目录与 PDF 书签
+
 Markdown 标题目录和 PDF 书签目录位于阅读区右上角，使用绝对定位浮层。展开目录不会改变正文宽度、排版或 PDF 页面视口；点击标题跳转，Esc 可收起目录。PDF 缩略图仍是单独可调整宽度的导航栏。
 
 ## 运行
@@ -70,14 +88,15 @@ Actions 自动执行前端测试、桌面 IPC/UI 回归、Rust 测试、NSIS 构
 - PDF：PDF.js 解析与 Worker 渲染；连续滚动阅读、翻页 / 页码跳转、全文查找、缩放、适合宽度 / 页面、旋转。缩略图栏可在 120–360px 间拖动调整；页码、阅读偏移、缩放和栏宽会保存在工作区。正文和真实 PDF 缩略图使用 VueUse 虚拟列表，只挂载视口附近的页面。
 - DOCX：docx-preview 保留原始排版阅读，Mammoth 提取内容，Tiptap 提供基础富文本编辑。
 - 工作区：类型筛选、最近打开、收藏、标签、搜索、命令面板、右键菜单、标签拖动排序和边缘分屏；拖动通过 VueUse 管理指针事件，更新真实 Layout Tree。
+- 文件与文件夹：系统选择框导入文档、打开文件夹按需阅读、整个文件夹批量导入、拖入文件夹、最近打开的文件夹与本地文件；目录扫描与读取在 Rust 侧完成，只允许访问用户选中过的位置。
 - 外观：浅色 / 深色 / 跟随系统，侧栏、Inspector、AI 面板可调整宽度。
-- AI：设置 → AI Agent 管理多份服务配置；支持 OpenAI 兼容 / Claude Messages、模型列表获取、连接测试、Windows 密钥加密保存、任务容量设置。侧栏可切换模型、分析当前文档、调用只读搜索和标题提取工具、停止任务并复制回答。架构参考 `D:/code/MiraiHub/src-tauri/src/agent`，详见 `docs/agent-integration.md`。
+- AI：设置 → AI Agent 管理多份服务配置；支持 OpenAI 兼容 / Claude Messages、模型列表获取、连接测试、Windows 密钥加密保存（可用小眼睛按需查看）、任务容量设置。侧栏可切换模型、分析当前文档、上传文本 / PDF / DOCX 附件、逐步查看只读文档搜索、标题提取与分页读取的工具调用、停止任务、复制整段对话；聊天记录按文档加密保存，可跨重启浏览、搜索、重命名和删除。架构参考 `D:/code/MiraiHub/src-tauri/src/agent`，详见 `docs/agent-integration.md`。
 
 ## 当前阶段边界
 
-这是界面与文档引擎接入阶段，尚未完成需求中的全部 19 个阶段。导入内容保存在此设备的工作区（文本草稿使用 localStorage，PDF / DOCX 原文件副本使用 IndexedDB），当前保存与重命名、移动、移除操作针对工作区记录；Rust 文件系统写回尚未接入。
+这是界面与文档引擎接入阶段，尚未完成需求中的全部 19 个阶段。导入内容保存在此设备的工作区（文本草稿使用 localStorage，PDF / DOCX 原文件副本使用 IndexedDB），当前保存与重命名、移动、移除操作针对工作区记录；Rust 文件系统写回尚未接入。“打开文件夹”只读取文档，不监听目录变化，磁盘上新增或改名的文件需要手动重新扫描。
 
-Markdown 可导出 `.md`；PDF 和未编辑 DOCX 可导出原文件；编辑后的 Word 暂导出 HTML，尚未实现 DOCX 编辑稿回写和旧 `.doc` 格式。Markdown 的 Mermaid / 数学公式仍待接入。AI 在 Windows 桌面端通过用户配置的模型服务调用；浏览器仅预览设置界面。AI 对话当前保留于本次应用内存中，跨重启历史和直接应用编辑建议尚未实现。当前单文件导入限制为 50 MB。
+Markdown 可导出 `.md`；PDF 和未编辑 DOCX 可导出原文件；编辑后的 Word 暂导出 HTML，尚未实现 DOCX 编辑稿回写和旧 `.doc` 格式。Markdown 的 Mermaid / 数学公式仍待接入。AI 在 Windows 桌面端通过用户配置的模型服务调用；浏览器仅预览设置界面。AI 聊天记录按文档加密保存在应用数据目录，可跨重启恢复；直接把编辑建议写回文档尚未实现。AI 附件限单条消息 4 个文件、单个 64 KB 文本、合计 128 KB。当前单文件导入限制为 50 MB。
 
 ## 代码边界
 
@@ -86,12 +105,13 @@ Markdown 可导出 `.md`；PDF 和未编辑 DOCX 可导出原文件；编辑后�
 - `src/modules/{markdown,pdf,word,ai}`：各文档引擎及 AI 独立实现。
 - `src/stores` / `src/composables`：工作区状态与交互协调。
 - `src/api/ipc`：集中管理文档、文件和窗口 API。
+- `src-tauri/src/files.rs`：系统选择框、目录扫描、按需读取与访问许可。
 - `src-tauri/src/lib.rs`：保持应用入口与插件注册职责。
 
 ## 验收
 
-`pnpm test` 检查递归布局、阅读位置校验、连续 PDF 页高和旋转定位、AI 文档快照绑定。运行开发服务后可打开 `http://localhost:1420/tests/engine-smoke.html`，点击“运行验收”检查三类文档导入、PDF 二进制保存、DOCX 原始排版渲染以及 Markdown 危险链接处理。测试仅使用 `tests/fixtures` 中的合成文件。
+`pnpm test` 检查递归布局、阅读位置校验、连续 PDF 页高和旋转定位、AI 文档快照绑定、附件限制与密钥提交规则、文件夹条目分组与导入路径。`cargo test` 另外覆盖目录扫描（跳过噪音目录、超大文件与软链接）和访问许可判定。运行开发服务后可打开 `http://localhost:1420/tests/engine-smoke.html`，点击“运行验收”检查三类文档导入、PDF 二进制保存、DOCX 原始排版渲染以及 Markdown 危险链接处理。测试仅使用 `tests/fixtures` 中的合成文件。
 
-AI 配置回归测试：先运行 `pnpm exec playwright install chromium`，再运行 `pnpm test:ui`。测试通过 Tauri 官方 mock IPC 验证表单、侧栏、配置隔离和取消；后端用 `cargo test --manifest-path src-tauri/Cargo.toml --locked` 验证真实 HTTP 协议适配。也可用 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` 指定已有 Chromium 路径。
+AI 配置回归测试：先运行 `pnpm exec playwright install chromium`，再运行 `pnpm test:ui`。测试通过 Tauri 官方 mock IPC 验证表单、密钥查看、侧栏、附件上传、逐步工具调用、聊天记录管理、配置隔离和取消；后端用 `cargo test --manifest-path src-tauri/Cargo.toml --locked` 验证真实 HTTP 协议适配、加密聊天记录与附件校验。也可用 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` 指定已有 Chromium 路径。
 
-设计基准及阶段顺序见 `docs/design-system.md`。`tests/release.test.mjs` 使用临时本地 Git 仓库验证版本同步、发版推送与失败重试，不会推送真实远程仓库。`tests/desktop-ui.spec.ts` 验证托盘保存与退出的 IPC 协调。Windows 托盘点击、窗口吸附、多显示器、安装升级和长时间运行仍需桌面专项验收。
+设计基准及阶段顺序见 `docs/design-system.md`。`tests/release.test.mjs` 使用临时本地 Git 仓库验证版本同步、发版推送与失败重试，不会推送真实远程仓库。`tests/desktop-ui.spec.ts` 验证托盘保存与退出的 IPC 协调，`tests/folder-ui.spec.ts` 用 mock IPC 验证打开文件夹、按需载入、全部导入与最近打开的重新载入。Windows 托盘点击、窗口吸附、多显示器、安装升级和长时间运行仍需桌面专项验收；系统文件夹选择框依赖真实 Windows Shell 对话框，需要在桌面端手动验收。

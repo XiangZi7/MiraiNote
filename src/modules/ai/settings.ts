@@ -22,6 +22,8 @@ export interface AgentProfileDraft extends Omit<AgentProfile, 'id'> {
   id?: string
   apiKey: string
   clearKey: boolean
+  /** Key fetched from the backend for display; unchanged text is submitted as "keep existing". */
+  revealed: string
 }
 export interface AgentProfileInput {
   id?: string
@@ -116,6 +118,7 @@ export function newAgentProfile(presetId = 'openai'): AgentProfileDraft {
     hasApiKey: false,
     apiKey: '',
     clearKey: false,
+    revealed: '',
     limits: { ...capacityPresets[0]!.limits },
   }
 }
@@ -125,6 +128,7 @@ export function editAgentProfile(profile: AgentProfile): AgentProfileDraft {
     limits: { ...profile.limits },
     apiKey: '',
     clearKey: false,
+    revealed: '',
   }
 }
 export function profileInput(draft: AgentProfileDraft): AgentProfileInput {
@@ -136,7 +140,10 @@ export function profileInput(draft: AgentProfileDraft): AgentProfileInput {
       apiFormat: draft.apiFormat,
       baseUrl: draft.baseUrl.trim(),
       model: draft.model.trim(),
-      apiKey: draft.apiKey,
+      // A revealed key left untouched stays "unchanged", so switching the API address still
+      // requires re-entering it instead of silently forwarding the old key to another service.
+      apiKey:
+        draft.revealed && draft.apiKey === draft.revealed ? '' : draft.apiKey,
       limits: { ...draft.limits },
     },
   }

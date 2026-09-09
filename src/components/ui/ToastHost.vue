@@ -24,6 +24,17 @@ const overlays = useOverlaysStore()
           /><span>{{ toast.message }}</span>
         </div></TransitionGroup
       >
+      <div
+        v-if="overlays.state.busy"
+        class="border-line bg-elevated shadow-floating text-secondary pointer-events-auto flex items-center gap-2.5 rounded-lg border px-4 py-3 text-xs"
+        role="status"
+      >
+        <AppIcon
+          name="lucide:loader-circle"
+          :size="16"
+          class="animate-spin"
+        /><span class="truncate">{{ overlays.state.busy }}</span>
+      </div>
     </div></Teleport
   >
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { reactive, toRefs, useId } from 'vue'
+import { onScopeDispose, reactive, toRefs, useId } from 'vue'
 import { AppSelect, AppSwitch, IconButton, TextInput } from '@/components/ui'
+import { agentApi, agentError } from '@/api/ipc/agent'
 import AgentModelField from './AgentModelField.vue'
 import AgentCapacityFields from './AgentCapacityFields.vue'
 import type { AgentApiFormat, AgentProfileDraft } from '../settings'
@@ -13,10 +14,40 @@ const formats: { value: AgentApiFormat; label: string }[] = [
 ]
 // 响应式状态
 const state = reactive({
-  // 仅控制本次输入密钥的可见性
+  // 仅控制密钥输入框的可见性
   showKey: false,
+  // 取回已保存密钥时的状态
+  loadingKey: false,
+  // 取回失败的提示
+  keyError: '',
 })
-const { showKey } = toRefs(state)
+const { showKey, loadingKey, keyError } = toRefs(state)
+onScopeDispose(() => {
+  draft.value.revealed = ''
+})
+// 已保存的密钥不会随配置一起下发，点开小眼睛时按需取回。
+async function toggleKey() {
+  state.keyError = ''
+  if (state.showKey) {
+    state.showKey = false
+    return
+  }
+  if (draft.value.apiKey || !draft.value.hasApiKey || !draft.value.id) {
+    state.showKey = true
+    return
+  }
+  state.loadingKey = true
+  try {
+    const key = await agentApi.revealKey(draft.value.id)
+    draft.value.apiKey = key
+    draft.value.revealed = key
+    state.showKey = true
+  } catch (error) {
+    state.keyError = agentError(error)
+  } finally {
+    state.loadingKey = false
+  }
+}
 </script>
 <template>
   <fieldset
@@ -90,12 +121,26 @@ const { showKey } = toRefs(state)
           :disabled="draft.clearKey"
           maxlength="8192"
         /><IconButton
-          :icon="showKey ? 'lucide:eye-off' : 'lucide:eye'"
+          :icon="
+            loadingKey
+              ? 'lucide:loader-circle'
+              : showKey
+                ? 'lucide:eye-off'
+                : 'lucide:eye'
+          "
+          :class="{ 'animate-spin': loadingKey }"
           :label="showKey ? '隐藏密钥' : '显示密钥'"
-          :disabled="draft.clearKey"
-          @click="showKey = !showKey"
+          :disabled="draft.clearKey || loadingKey"
+          @click="toggleKey"
         />
       </div>
+      <p
+        v-if="keyError"
+        role="alert"
+        class="text-danger text-[11px] leading-5"
+      >
+        {{ keyError }}
+      </p>
       <label
         v-if="draft.hasApiKey"
         class="text-muted flex items-center gap-2 text-[11px]"

@@ -4,7 +4,7 @@ import { exampleDocuments } from '@/data/examples'
 import { isObject, loadJson, persistJson } from '@/utils/storage'
 import { useOverlaysStore } from './overlays'
 import type { DocumentRecord } from '@/types/document'
-import type { LibraryFilter } from '@/types/workspace'
+import type { LibrarySection } from '@/types/workspace'
 
 function validDocuments(value: unknown): value is DocumentRecord[] {
   return (
@@ -15,7 +15,8 @@ function validDocuments(value: unknown): value is DocumentRecord[] {
         typeof item.id === 'string' &&
         typeof item.name === 'string' &&
         typeof item.path === 'string' &&
-        (item.sourcePath === undefined || typeof item.sourcePath === 'string') &&
+        (item.sourcePath === undefined ||
+          typeof item.sourcePath === 'string') &&
         ['markdown', 'pdf', 'word'].includes(String(item.kind)) &&
         ['example', 'local'].includes(String(item.source)) &&
         typeof item.content === 'string' &&
@@ -44,7 +45,7 @@ export const useDocumentsStore = defineStore('documents', () => {
   function get(id: string | undefined): DocumentRecord | undefined {
     return id ? byId.value.get(id) : undefined
   }
-  function filtered(filter: LibraryFilter) {
+  function filtered(filter: LibrarySection) {
     const result = documents.value.filter(
       item =>
         filter === 'all' ||

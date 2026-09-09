@@ -72,6 +72,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     )
   )
   const library = shallowRef<LibraryFilter | null>(null)
+  const libraryFolder = computed(() =>
+    library.value?.startsWith('folder:') ? library.value.slice(7) : null
+  )
   const drag = shallowRef<{ paneId: string; tabId: string } | null>(null)
   const dropTarget = shallowRef<
     | { paneId: string; index: number }
@@ -269,6 +272,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     activeTab,
     currentDocument,
     library,
+    libraryFolder,
     drag,
     dropTarget,
     closedTabs,

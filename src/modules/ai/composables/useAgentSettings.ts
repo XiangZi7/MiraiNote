@@ -69,7 +69,10 @@ export function useAgentSettings() {
   onMounted(initialize)
   onScopeDispose(() => {
     disposed = true
-    for (const item of Object.values(state.drafts)) item.apiKey = ''
+    for (const item of Object.values(state.drafts)) {
+      item.apiKey = ''
+      item.revealed = ''
+    }
   })
   async function submit(test = false) {
     const current = draft.value
@@ -94,6 +97,7 @@ export function useAgentSettings() {
         )
         agent.acceptSettings(settings)
         current.apiKey = ''
+        current.revealed = ''
         if (disposed) return
         const saved = settings.profiles.find(
           item => item.id === settings.activeId
@@ -121,6 +125,7 @@ export function useAgentSettings() {
     try {
       if (current.id) agent.acceptSettings(await agentApi.remove(current.id))
       current.apiKey = ''
+      current.revealed = ''
       if (disposed) return
       delete state.drafts[state.selectedId]
       state.selectedId = Object.keys(state.drafts)[0] ?? ''

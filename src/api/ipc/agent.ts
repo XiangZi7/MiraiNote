@@ -4,19 +4,25 @@ import type {
   AgentProfileInput,
   AgentModelInput,
 } from '@/modules/ai/settings'
-import type { AgentContext } from '@/modules/ai/types'
+import type {
+  AgentAttachment,
+  AgentContext,
+  AgentConversationSummary,
+  AgentRun,
+} from '@/modules/ai/types'
 
-export interface CompletionInput {
-  runId: string
+export interface StartInput {
   profileId: string
   prompt: string
   context: AgentContext
-  history: { role: 'user' | 'assistant'; content: string }[]
+  conversationId?: string
+  attachments: AgentAttachment[]
 }
-export interface CompletionResult {
-  text: string
-  steps: number
-  model: string
+export interface SendInput {
+  runId: string
+  prompt: string
+  context: AgentContext
+  attachments: AgentAttachment[]
 }
 function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   if (!isTauri())
@@ -45,11 +51,34 @@ export const agentApi = {
   remove: (id: string) => call<AgentSettings>('agent_delete_profile', { id }),
   activate: (id: string) =>
     call<AgentSettings>('agent_activate_profile', { id }),
+  revealKey: (id: string) => call<string>('agent_reveal_key', { id }),
   models: (input: AgentModelInput) =>
     call<string[]>('agent_list_models', { input }),
   test: (input: AgentProfileInput, clearKey: boolean) =>
     call<string>('agent_test_profile', { input, clearKey }),
-  complete: (input: CompletionInput) =>
-    call<CompletionResult>('agent_complete', { input }),
+  start: (input: StartInput) => call<AgentRun>('agent_start', { input }),
+  send: (input: SendInput) => call<AgentRun>('agent_send', { input }),
+  step: (runId: string) => call<AgentRun>('agent_step', { runId }),
   cancel: (runId: string) => call<void>('agent_cancel', { runId }),
+  forget: (runId: string) => call<void>('agent_forget', { runId }),
+  conversations: (documentId: string) =>
+    isTauri()
+      ? call<AgentConversationSummary[]>('agent_list_conversations', {
+          documentId,
+        })
+      : Promise.resolve([]),
+  openConversation: (documentId: string, conversationId: string) =>
+    call<AgentRun>('agent_open_conversation', { documentId, conversationId }),
+  renameConversation: (
+    documentId: string,
+    conversationId: string,
+    title: string
+  ) =>
+    call<AgentConversationSummary>('agent_rename_conversation', {
+      documentId,
+      conversationId,
+      title,
+    }),
+  deleteConversation: (documentId: string, conversationId: string) =>
+    call<void>('agent_delete_conversation', { documentId, conversationId }),
 }

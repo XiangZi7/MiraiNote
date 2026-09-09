@@ -12,12 +12,15 @@ export const useOverlaysStore = defineStore('overlays', () => {
     help: false,
     menu: null as { x: number; y: number; items: MenuItem[] } | null,
     toasts: [] as { id: string; message: string; error: boolean }[],
+    // 批量导入等长任务的常驻提示，完成后置空。
+    busy: null as string | null,
     prompt: null as {
       title: string
       label: string
       value: string
       confirm: string
       danger: boolean
+      input?: boolean
       action: (value: string) => void | Promise<void>
     } | null,
   })
@@ -31,6 +34,9 @@ export const useOverlaysStore = defineStore('overlays', () => {
       error ? 7000 : 3500
     )
   }
+  function progress(message: string | null) {
+    state.busy = message
+  }
   function menu(event: MouseEvent, items: MenuItem[]) {
     state.menu = { x: event.clientX, y: event.clientY, items }
   }
@@ -41,5 +47,5 @@ export const useOverlaysStore = defineStore('overlays', () => {
     state.menu = null
     state.prompt = null
   }
-  return { state, toast, menu, close }
+  return { state, toast, progress, menu, close }
 })

@@ -19,6 +19,12 @@ impl AppError {
             message: message.into(),
         }
     }
+    pub fn not_found(message: impl Into<String>) -> Self {
+        Self {
+            kind: "notFound",
+            message: message.into(),
+        }
+    }
     pub fn cancelled() -> Self {
         Self {
             kind: "cancelled",
@@ -30,7 +36,7 @@ impl From<std::io::Error> for AppError {
     fn from(_: std::io::Error) -> Self {
         Self {
             kind: "io",
-            message: "无法读写 AI 配置，请检查应用数据目录权限".into(),
+            message: "无法读写 AI 配置或聊天记录，请检查应用数据目录权限".into(),
         }
     }
 }

@@ -41,6 +41,24 @@ test('AI profile settings and document conversation work through the IPC boundar
       )
     )
   ).toBe(false)
+  // 已保存的密钥不随配置下发，点小眼睛才按需取回。
+  await page.getByRole('button', { name: '显示密钥', exact: true }).click()
+  await expect(page.getByLabel('API Key', { exact: true })).toHaveValue(
+    'synthetic-test-key'
+  )
+  await page.getByRole('button', { name: '保存并使用', exact: true }).click()
+  await expect(
+    page.getByText('已保存并使用 测试文档助手', { exact: true })
+  ).toBeVisible()
+  // 未改动取回的密钥时提交空值，换地址仍会要求重新输入，不会把旧密钥转发给别的服务。
+  expect(
+    await page.evaluate(
+      () =>
+        (window as any).agentTest.calls
+          .filter((call: any) => call.command === 'agent_save_profile')
+          .at(-1).payload.input.config.apiKey
+    )
+  ).toBe('')
   await page.screenshot({
     path: testInfo.outputPath('agent-settings-light.png'),
   })
@@ -86,25 +104,52 @@ test('AI profile settings and document conversation work through the IPC boundar
   await page.getByRole('button', { name: '关闭对话框', exact: true }).click()
   await page.getByRole('button', { name: '更多操作', exact: true }).click()
   await page.getByText('AI 助手', { exact: true }).click()
+  const panel = page.locator('aside[aria-label="AI 助手"]')
+  const composer = page.getByRole('textbox', { name: 'AI 请求', exact: true })
   await page.getByRole('button', { name: '总结文档', exact: true }).click()
+  await panel.locator('input[type=file]').setInputFiles({
+    name: 'notes.log',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('合成日志内容：第一行\n第二行'),
+  })
+  await expect(page.getByText('1 个附件', { exact: false })).toBeVisible()
   await page.getByRole('button', { name: '发送消息', exact: true }).click()
+  // 每一步都写回界面：先看到工具调用，再看到模型回答。
+  await expect(
+    page.getByText('提取文档标题 · 2 条', { exact: true })
+  ).toBeVisible()
   await expect(
     page.getByText('这是合成测试响应。', { exact: true })
   ).toBeVisible()
-  expect(
-    await page.evaluate(
-      () =>
-        (window as any).agentTest.calls.find(
-          (c: any) => c.command === 'agent_complete'
-        ).payload.input.context.document.text.length
+  await expect(page.getByText('notes.log', { exact: true })).toBeVisible()
+  const started = await page.evaluate(() => {
+    const call = (window as any).agentTest.calls.find(
+      (item: any) => item.command === 'agent_start'
     )
-  ).toBeGreaterThan(0)
+    return {
+      text: call.payload.input.context.document.text.length,
+      attachment: call.payload.input.attachments[0],
+    }
+  })
+  expect(started.text).toBeGreaterThan(0)
+  expect(started.attachment.name).toBe('notes.log')
+  expect(started.attachment.content).toContain('第二行')
+  await composer.fill('再补充三点')
+  await page.getByRole('button', { name: '发送消息', exact: true }).click()
+  await expect(
+    page.getByText('这是合成测试响应。', { exact: true })
+  ).toHaveCount(2)
+  expect(
+    await page.evaluate(() =>
+      (window as any).agentTest.calls.some(
+        (item: any) => item.command === 'agent_send'
+      )
+    )
+  ).toBe(true)
   await page.evaluate(() => {
     ;(window as any).agentTest.slow = true
   })
-  await page
-    .getByRole('textbox', { name: 'AI 请求', exact: true })
-    .fill('继续解释')
+  await composer.fill('继续解释')
   await page.getByRole('button', { name: '发送消息', exact: true }).click()
   await page.getByRole('button', { name: '停止生成', exact: true }).click()
   await expect(
@@ -112,22 +157,62 @@ test('AI profile settings and document conversation work through the IPC boundar
   ).toBeVisible()
   await expect(
     page.getByText('这是合成测试响应。', { exact: true })
-  ).toHaveCount(1)
+  ).toHaveCount(2)
   await page.evaluate(() => {
     ;(window as any).agentTest.slow = false
     ;(window as any).agentTest.fail = true
   })
-  await page
-    .getByRole('textbox', { name: 'AI 请求', exact: true })
-    .fill('测试错误')
+  await page.getByRole('button', { name: '新建对话', exact: true }).click()
+  await composer.fill('测试错误')
+  await panel.locator('input[type=file]').setInputFiles({
+    name: 'retry.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('重试内容'),
+  })
   await page.getByRole('button', { name: '发送消息', exact: true }).click()
   await expect(
     page.getByText('模型服务返回 HTTP 401，请检查密钥', { exact: true })
   ).toBeVisible()
+  // 请求被拒绝时草稿和附件一起还给用户。
+  await expect(composer).toHaveValue('测试错误')
+  await expect(page.getByText('retry.txt', { exact: true })).toBeVisible()
+  await page.evaluate(() => {
+    ;(window as any).agentTest.fail = false
+    ;(window as any).agentTest.failStep = true
+  })
+  await page.getByRole('button', { name: '发送消息', exact: true }).click()
   await expect(
-    page.getByRole('textbox', { name: 'AI 请求', exact: true })
-  ).toHaveValue('测试错误')
+    page.getByText('模型请求失败：合成测试错误', { exact: true })
+  ).toBeVisible()
+  await expect(page.getByText('任务未完成', { exact: true })).toBeVisible()
+  await page.evaluate(() => {
+    ;(window as any).agentTest.failStep = false
+  })
   await page.screenshot({ path: testInfo.outputPath('agent-conversation.png') })
+  // 聊天记录按文档保存，可重命名和删除。
+  await page.getByRole('button', { name: '聊天记录', exact: true }).click()
+  const history = page.getByRole('dialog', { name: '聊天记录' })
+  await expect(history.getByRole('listitem')).toHaveCount(2)
+  await history
+    .getByRole('button', { name: /^重命名 / })
+    .first()
+    .click()
+  await history.getByLabel('会话名称', { exact: true }).fill('文档排查记录')
+  await history.getByRole('button', { name: '保存名称', exact: true }).click()
+  await expect(history.getByText('文档排查记录', { exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('agent-history.png') })
+  await history
+    .getByRole('button', { name: /^删除 / })
+    .first()
+    .click()
+  await history.getByRole('button', { name: '确认删除', exact: true }).click()
+  await expect(history.getByRole('listitem')).toHaveCount(1)
+  await history
+    .getByRole('button', { name: '关闭聊天记录', exact: true })
+    .click()
+  await expect(
+    page.getByText('围绕文档，继续思考', { exact: true })
+  ).toBeVisible()
   await page.getByRole('button', { name: 'AI Agent 配置', exact: true }).click()
   await page.getByLabel('添加服务配置', { exact: true }).selectOption('claude')
   await page.getByRole('button', { name: '添加', exact: true }).click()

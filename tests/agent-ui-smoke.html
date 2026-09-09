@@ -6,67 +6,218 @@
     import { mockIPC, mockWindows } from '@tauri-apps/api/mocks'
     window.isTauri = true
     const settings = { activeId: '', profiles: [] }
-    window.agentTest = { calls: [], slow: false, fail: false, saved: settings }
+    const keys = {}
+    // Minimal in-memory stand-in for the Rust agent service: runs, steps and transcripts.
+    const conversations = new Map()
+    const runs = new Map()
+    window.agentTest = {
+      calls: [],
+      slow: false,
+      fail: false,
+      failStep: false,
+      saved: settings,
+      keys,
+      conversations,
+    }
     let resolvePending
-    mockWindows('main')
-    mockIPC(async (command, payload) => {
-      if (command === 'desktop_take_launch_files') return []
-      if (!command.startsWith('agent_')) return
-      window.agentTest.calls.push({
-        command,
-        payload: structuredClone(payload),
+    const hex = () => crypto.randomUUID().replaceAll('-', '')
+    const activeModel = () =>
+      settings.profiles.find(p => p.id === settings.activeId)?.model ?? ''
+    function snapshot(run) {
+      return structuredClone({
+        id: run.id,
+        conversationId: run.conversationId,
+        document: run.documentName,
+        documentId: run.documentId,
+        provider: 'https://fixture.example/v1',
+        model: run.model,
+        status: run.status,
+        entries: run.entries,
       })
-      if (command === 'agent_get_settings') return structuredClone(settings)
-      if (command === 'agent_list_models')
-        return ['fixture-model', 'other-model']
-      if (command === 'agent_test_profile') return '连接成功 · fixture-model'
-      if (command === 'agent_save_profile') {
-        const input = payload.input,
-          id = input.id || crypto.randomUUID()
-        const old = settings.profiles.find(p => p.id === id)
-        const { apiKey, ...config } = input.config
-        const profile = {
-          ...config,
-          id,
-          name: input.name,
-          hasApiKey: !payload.clearKey && (!!apiKey || !!old?.hasApiKey),
-        }
-        settings.profiles = settings.profiles
-          .filter(p => p.id !== id)
-          .concat(profile)
-        settings.activeId = id
-        return structuredClone(settings)
+    }
+    function persist(run) {
+      const previous = conversations.get(run.conversationId)
+      conversations.set(run.conversationId, {
+        id: run.conversationId,
+        title: previous?.title ?? run.entries[0]?.text?.slice(0, 60) ?? '新对话',
+        model: run.model,
+        provider: 'https://fixture.example/v1',
+        documentName: run.documentName,
+        documentId: run.documentId,
+        createdAt: previous?.createdAt ?? Date.now(),
+        updatedAt: Date.now() + conversations.size,
+        status: run.status,
+        entries: structuredClone(run.entries),
+      })
+    }
+    function userEntry(prompt, attachments) {
+      return {
+        role: 'user',
+        text: prompt.trim() || '请分析上传的文件。',
+        attachments: (attachments ?? []).map(file => ({
+          name: file.name,
+          size: new TextEncoder().encode(file.content).length,
+        })),
       }
-      if (command === 'agent_delete_profile') {
-        settings.profiles = settings.profiles.filter(p => p.id !== payload.id)
-        if (settings.activeId === payload.id) settings.activeId = ''
-        return structuredClone(settings)
-      }
-      if (command === 'agent_activate_profile') {
-        settings.activeId = payload.id
-        return structuredClone(settings)
-      }
-      if (command === 'agent_complete') {
-        if (window.agentTest.fail)
-          throw {
-            kind: 'internal',
-            message: '模型服务返回 HTTP 401，请检查密钥',
+    }
+    mockWindows('main')
+    mockIPC(
+      async (command, payload) => {
+        if (command === 'desktop_take_launch_files') return []
+        if (!command.startsWith('agent_')) return
+        window.agentTest.calls.push({
+          command,
+          payload: structuredClone(payload),
+        })
+        if (command === 'agent_get_settings') return structuredClone(settings)
+        if (command === 'agent_list_models')
+          return ['fixture-model', 'other-model']
+        if (command === 'agent_test_profile') return '连接成功 · fixture-model'
+        if (command === 'agent_reveal_key') return keys[payload.id] ?? ''
+        if (command === 'agent_save_profile') {
+          const input = payload.input,
+            id = input.id || crypto.randomUUID()
+          const old = settings.profiles.find(p => p.id === id)
+          const { apiKey, ...config } = input.config
+          if (payload.clearKey) delete keys[id]
+          else if (apiKey) keys[id] = apiKey
+          const profile = {
+            ...config,
+            id,
+            name: input.name,
+            hasApiKey: !payload.clearKey && (!!apiKey || !!old?.hasApiKey),
           }
-        if (window.agentTest.slow)
-          await new Promise(resolve => {
-            resolvePending = resolve
-          })
-        return {
-          text: '# 文档摘要\n\n这是合成测试响应。',
-          model: 'fixture-model',
-          steps: 1,
+          settings.profiles = settings.profiles
+            .filter(p => p.id !== id)
+            .concat(profile)
+          settings.activeId = id
+          return structuredClone(settings)
         }
-      }
-      if (command === 'agent_cancel') {
-        resolvePending?.()
-        return
-      }
-    }, { shouldMockEvents: true })
+        if (command === 'agent_delete_profile') {
+          settings.profiles = settings.profiles.filter(p => p.id !== payload.id)
+          delete keys[payload.id]
+          if (settings.activeId === payload.id) settings.activeId = ''
+          return structuredClone(settings)
+        }
+        if (command === 'agent_activate_profile') {
+          settings.activeId = payload.id
+          return structuredClone(settings)
+        }
+        if (command === 'agent_start') {
+          if (window.agentTest.fail)
+            throw {
+              kind: 'internal',
+              message: '模型服务返回 HTTP 401，请检查密钥',
+            }
+          const input = payload.input
+          const document = input.context.document
+          const restored = input.conversationId
+            ? conversations.get(input.conversationId)
+            : undefined
+          const run = {
+            id: hex(),
+            conversationId: input.conversationId ?? hex(),
+            documentId: document.id,
+            documentName: document.name,
+            model: activeModel(),
+            status: 'running',
+            step: 0,
+            entries: [
+              ...(restored?.entries ?? []),
+              userEntry(input.prompt, input.attachments),
+            ],
+          }
+          runs.set(run.id, run)
+          persist(run)
+          return snapshot(run)
+        }
+        if (command === 'agent_send') {
+          const input = payload.input
+          const run = runs.get(input.runId)
+          if (!run) throw { kind: 'notFound', message: 'AI 会话已结束，请开始新对话' }
+          run.entries.push(userEntry(input.prompt, input.attachments))
+          run.status = 'running'
+          run.step = 0
+          persist(run)
+          return snapshot(run)
+        }
+        if (command === 'agent_step') {
+          const run = runs.get(payload.runId)
+          if (!run) throw { kind: 'notFound', message: 'AI 会话已结束，请开始新对话' }
+          if (window.agentTest.failStep) {
+            run.status = 'failed'
+            run.entries.push({
+              role: 'error',
+              text: '模型请求失败：合成测试错误',
+            })
+            persist(run)
+            return snapshot(run)
+          }
+          if (window.agentTest.slow)
+            await new Promise(resolve => {
+              resolvePending = resolve
+            })
+          if (run.status !== 'running') return snapshot(run)
+          run.step += 1
+          if (run.step === 1)
+            run.entries.push({
+              role: 'tool',
+              text: '提取文档标题 · 2 条',
+              detail: '{"headings":[{"line":1,"text":"# 合成标题"}]}',
+            })
+          else {
+            run.entries.push({
+              role: 'assistant',
+              text: '# 文档摘要\n\n这是合成测试响应。',
+            })
+            run.status = 'completed'
+          }
+          persist(run)
+          return snapshot(run)
+        }
+        if (command === 'agent_cancel') {
+          const run = runs.get(payload.runId)
+          if (run && run.status === 'running') {
+            run.status = 'cancelled'
+            run.entries.push({ role: 'tool', text: '已停止本轮任务' })
+            persist(run)
+          }
+          resolvePending?.()
+          resolvePending = undefined
+          return
+        }
+        if (command === 'agent_forget') {
+          runs.delete(payload.runId)
+          return
+        }
+        if (command === 'agent_list_conversations')
+          return structuredClone(
+            [...conversations.values()]
+              .filter(item => item.documentId === payload.documentId)
+              .sort((a, b) => b.updatedAt - a.updatedAt)
+              .map(({ entries, documentId, status, ...summary }) => summary)
+          )
+        if (command === 'agent_open_conversation') {
+          const item = conversations.get(payload.conversationId)
+          if (!item || item.documentId !== payload.documentId)
+            throw { kind: 'invalidInput', message: '此聊天记录不属于当前文档' }
+          return snapshot({ ...item, id: '', conversationId: item.id })
+        }
+        if (command === 'agent_rename_conversation') {
+          const item = conversations.get(payload.conversationId)
+          if (!item || item.documentId !== payload.documentId)
+            throw { kind: 'invalidInput', message: '此聊天记录不属于当前文档' }
+          item.title = payload.title
+          const { entries, documentId, status, ...summary } = item
+          return structuredClone(summary)
+        }
+        if (command === 'agent_delete_conversation') {
+          conversations.delete(payload.conversationId)
+          return
+        }
+      },
+      { shouldMockEvents: true }
+    )
     await import('/src/main.ts')
   </script>
 </html>

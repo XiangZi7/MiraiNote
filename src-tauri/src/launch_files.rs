@@ -126,11 +126,19 @@ pub async fn desktop_take_launch_files(app: AppHandle) -> Result<Vec<LaunchDocum
             .lock()
             .map_err(|_| "文件队列不可用")?,
     );
-    tauri::async_runtime::spawn_blocking(move || {
+    let documents: Vec<LaunchDocument> = tauri::async_runtime::spawn_blocking(move || {
         paths.iter().map(|path| read_markdown(path)).collect()
     })
     .await
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    // 双击打开过的文件同样计入访问许可，之后可以从“最近打开”重新载入。
+    let grants = app.state::<crate::files::Grants>();
+    for document in &documents {
+        if document.error.is_none() {
+            let _ = grants.grant(&app, Path::new(&document.path));
+        }
+    }
+    Ok(documents)
 }
 
 #[cfg(test)]

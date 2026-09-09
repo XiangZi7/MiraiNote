@@ -91,30 +91,40 @@ test('release tags reject malformed and overflowing Windows version segments', (
   assert.equal(nextReleaseTag('1.2.3', [], 'minor'), 'v1.3.0')
 })
 
-test('version synchronization changes only the application package in Cargo.lock', t => {
-  const { root } = fixture(t)
-  const before = readFileSync(join(root, 'src-tauri/Cargo.lock'), 'utf8')
-  syncReleaseVersion(root, 'v2.0.0-beta.1')
-  assert.equal(
-    syncReleaseVersion(root, 'v2.0.0-beta.1', { check: true }).prerelease,
-    true
-  )
-  const after = readFileSync(join(root, 'src-tauri/Cargo.lock'), 'utf8')
-  assert.equal(
-    after.replace(
-      'name = "mirainote"\nversion = "2.0.0-beta.1"',
-      'name = "mirainote"\nversion = "1.2.3"'
-    ),
-    before
-  )
-  writeFileSync(
-    join(root, 'src-tauri/Cargo.toml'),
-    '[package]\nname = "wrong"\nversion = "1.0.0"\n'
-  )
-  const packageBefore = readFileSync(join(root, 'package.json'), 'utf8')
-  assert.throws(() => syncReleaseVersion(root, 'v3.0.0'), /唯一/)
-  assert.equal(readFileSync(join(root, 'package.json'), 'utf8'), packageBefore)
-})
+for (const [format, lineEnding] of [
+  ['LF', '\n'],
+  ['CRLF', '\r\n'],
+]) {
+  test(`version synchronization changes only the application package in Cargo.lock (${format})`, t => {
+    const { root } = fixture(t)
+    const lockfile = join(root, 'src-tauri/Cargo.lock')
+    const before = readFileSync(lockfile, 'utf8').replace(/\r?\n/g, lineEnding)
+    writeFileSync(lockfile, before)
+    syncReleaseVersion(root, 'v2.0.0-beta.1')
+    assert.equal(
+      syncReleaseVersion(root, 'v2.0.0-beta.1', { check: true }).prerelease,
+      true
+    )
+    const after = readFileSync(join(root, 'src-tauri/Cargo.lock'), 'utf8')
+    assert.equal(
+      after.replace(
+        `name = "mirainote"${lineEnding}version = "2.0.0-beta.1"`,
+        `name = "mirainote"${lineEnding}version = "1.2.3"`
+      ),
+      before
+    )
+    writeFileSync(
+      join(root, 'src-tauri/Cargo.toml'),
+      '[package]\nname = "wrong"\nversion = "1.0.0"\n'
+    )
+    const packageBefore = readFileSync(join(root, 'package.json'), 'utf8')
+    assert.throws(() => syncReleaseVersion(root, 'v3.0.0'), /唯一/)
+    assert.equal(
+      readFileSync(join(root, 'package.json'), 'utf8'),
+      packageBefore
+    )
+  })
+}
 
 test('dry run leaves commits, tags and working files unchanged', t => {
   const { root, remote } = fixture(t)

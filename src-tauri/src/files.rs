@@ -12,18 +12,28 @@ use std::{
 use tauri::{ipc::Response, AppHandle, Manager, State};
 
 const MAX_FILE_BYTES: u64 = 50 * 1024 * 1024;
-const MAX_ENTRIES: usize = 2000;
-const MAX_DEPTH: usize = 8;
+const MAX_PDF_BYTES: u64 = 250 * 1024 * 1024;
 const MAX_GRANTS: usize = 128;
 const STORE: &str = "workspace-paths.json";
-const IGNORED_DIRS: [&str; 6] = [
+const IGNORED_DIRS: [&str; 9] = [
     "node_modules",
     "target",
     "dist",
     "$recycle.bin",
     "system volume information",
     "__pycache__",
+    ".git",
+    ".svn",
+    ".hg",
 ];
+
+fn file_size_limit(path: &Path) -> u64 {
+    if kind_of(path) == Some("pdf") {
+        MAX_PDF_BYTES
+    } else {
+        MAX_FILE_BYTES
+    }
+}
 
 pub fn kind_of(path: &Path) -> Option<&'static str> {
     match path
@@ -174,6 +184,7 @@ pub struct FolderScan {
     entries: Vec<FileEntry>,
     truncated: bool,
     oversized: usize,
+    unreadable: usize,
 }
 
 fn entry(path: &Path, root: Option<&Path>, kind: &'static str, meta: &Metadata) -> FileEntry {
@@ -199,7 +210,7 @@ fn entry(path: &Path, root: Option<&Path>, kind: &'static str, meta: &Metadata) 
 fn stat(path: &Path) -> Option<FileEntry> {
     let kind = kind_of(path)?;
     let meta = fs::metadata(path).ok()?;
-    if !meta.is_file() || meta.len() > MAX_FILE_BYTES {
+    if !meta.is_file() {
         return None;
     }
     Some(entry(path, None, kind, &meta))
@@ -210,15 +221,24 @@ fn scan(root: &Path) -> AppResult<FolderScan> {
         return Err(AppError::invalid_input("请选择文件夹"));
     }
     let mut entries: Vec<FileEntry> = Vec::new();
-    let mut queue = vec![(root.to_path_buf(), 0usize)];
-    let mut truncated = false;
+    let mut queue = vec![root.to_path_buf()];
     let mut oversized = 0usize;
-    while let Some((dir, depth)) = queue.pop() {
+    let mut unreadable = 0usize;
+    while let Some(dir) = queue.pop() {
         let Ok(listing) = fs::read_dir(&dir) else {
+            if dir == root {
+                return Err(AppError::invalid_input("无法读取这个文件夹，请检查访问权限"));
+            }
+            unreadable += 1;
             continue;
         };
-        for item in listing.flatten() {
+        for item in listing {
+            let Ok(item) = item else {
+                unreadable += 1;
+                continue;
+            };
             let Ok(file_type) = item.file_type() else {
+                unreadable += 1;
                 continue;
             };
             // 跳过软链接，既避免目录环，也避免绕过访问许可。
@@ -226,32 +246,25 @@ fn scan(root: &Path) -> AppResult<FolderScan> {
                 continue;
             }
             let name = item.file_name().to_string_lossy().into_owned();
-            if name.starts_with('.') {
-                continue;
-            }
             let path = item.path();
             if file_type.is_dir() {
-                if depth + 1 < MAX_DEPTH
-                    && !IGNORED_DIRS.contains(&name.to_ascii_lowercase().as_str())
-                {
-                    queue.push((path, depth + 1));
+                if !IGNORED_DIRS.contains(&name.to_ascii_lowercase().as_str()) {
+                    queue.push(path);
                 }
                 continue;
             }
             let Some(kind) = kind_of(&path) else { continue };
-            let Ok(meta) = item.metadata() else { continue };
-            if meta.len() > MAX_FILE_BYTES {
-                oversized += 1;
+            let Ok(meta) = item.metadata() else {
+                unreadable += 1;
+                continue;
+            };
+            if !meta.is_file() {
                 continue;
             }
-            if entries.len() >= MAX_ENTRIES {
-                truncated = true;
-                break;
+            if meta.len() > file_size_limit(&path) {
+                oversized += 1;
             }
             entries.push(entry(&path, Some(root), kind, &meta));
-        }
-        if truncated {
-            break;
         }
     }
     entries.sort_by(|a, b| {
@@ -266,8 +279,9 @@ fn scan(root: &Path) -> AppResult<FolderScan> {
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| display_path(root)),
         entries,
-        truncated,
+        truncated: false,
         oversized,
+        unreadable,
     })
 }
 
@@ -279,15 +293,22 @@ fn read_bytes(path: &Path) -> AppResult<Vec<u8>> {
     if !meta.is_file() {
         return Err(AppError::invalid_input("请选择文档，不能读取文件夹"));
     }
-    if meta.len() > MAX_FILE_BYTES {
-        return Err(AppError::invalid_input("当前版本支持导入 50 MB 以内的文档"));
+    let limit = file_size_limit(path);
+    if meta.len() > limit {
+        return Err(AppError::invalid_input(format!(
+            "文件大小超过 {} MB，暂时无法载入",
+            limit / 1024 / 1024
+        )));
     }
     let mut bytes = Vec::new();
-    file.take(MAX_FILE_BYTES + 1)
+    file.take(limit + 1)
         .read_to_end(&mut bytes)
         .map_err(|_| AppError::invalid_input("无法读取文件内容"))?;
-    if bytes.len() as u64 > MAX_FILE_BYTES {
-        return Err(AppError::invalid_input("当前版本支持导入 50 MB 以内的文档"));
+    if bytes.len() as u64 > limit {
+        return Err(AppError::invalid_input(format!(
+            "文件大小超过 {} MB，暂时无法载入",
+            limit / 1024 / 1024
+        )));
     }
     Ok(bytes)
 }
@@ -521,8 +542,8 @@ mod tests {
             .map(|item| item.relative_path.as_str())
             .collect();
         // 排序只保证同一目录相邻且结果稳定，展示顺序由界面按中文规则再排。
-        assert_eq!(paths, ["子目录/报告.PDF", "子目录/更深/合同.docx", "说明 文档.md"]);
-        assert_eq!(result.entries[2].kind, "markdown");
+        assert_eq!(paths, [".隐藏.md", "子目录/报告.PDF", "子目录/更深/合同.docx", "说明 文档.md"]);
+        assert_eq!(result.entries[3].kind, "markdown");
         assert!(!result.truncated && result.oversized == 0);
         assert!(scan(&root.join("说明 文档.md")).is_err());
         fs::remove_dir_all(root).unwrap();
@@ -539,10 +560,34 @@ mod tests {
         fs::write(root.join("正常.md"), b"ok").unwrap();
         let result = scan(&root).unwrap();
         assert_eq!(result.oversized, 1);
-        assert_eq!(result.entries.len(), 1);
-        assert_eq!(result.entries[0].name, "正常.md");
+        assert_eq!(result.entries.len(), 2);
+        assert!(result.entries.iter().any(|entry| entry.name == "超大.md"));
         assert!(read_bytes(&big).unwrap_err().message.contains("50 MB"));
-        assert!(stat(&big).is_none());
+        assert!(stat(&big).is_some());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn scan_includes_large_pdfs_deep_folders_and_more_than_2000_files() {
+        let root = temp_root("complete-scan");
+        let deep = root.join("1/2/3/4/5/6/7/8/9/10/.课程");
+        fs::create_dir_all(&deep).unwrap();
+        let pdf = deep.join("大文件.PDF");
+        fs::File::create(&pdf).unwrap().set_len(MAX_FILE_BYTES + 1).unwrap();
+        for index in 0..2001 {
+            fs::write(root.join(format!("{index}.md")), b"ok").unwrap();
+        }
+        let result = scan(&root).unwrap();
+        assert_eq!(result.entries.len(), 2002);
+        assert_eq!(result.oversized, 0);
+        assert!(!result.truncated);
+        assert!(result.entries.iter().any(|entry| entry.name == "大文件.PDF"));
+        assert_eq!(stat(&pdf).unwrap().size, MAX_FILE_BYTES + 1);
+        assert_eq!(read_bytes(&pdf).unwrap().len() as u64, MAX_FILE_BYTES + 1);
+        assert_eq!(file_size_limit(&pdf), MAX_PDF_BYTES);
+        fs::File::create(&pdf).unwrap().set_len(MAX_PDF_BYTES + 1).unwrap();
+        assert!(read_bytes(&pdf).unwrap_err().message.contains("250 MB"));
+        assert!(stat(&pdf).is_some());
         fs::remove_dir_all(root).unwrap();
     }
 

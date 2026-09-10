@@ -43,6 +43,87 @@ const sources = (page: import('@playwright/test').Page) =>
       .filter(Boolean)
   )
 
+test('大 PDF 保留在列表中，载入限制和无权限目录不会静默隐藏', async ({
+  page,
+}) => {
+  await page.evaluate(async root => {
+    const state = (window as any).desktopTest
+    const bytes = Array.from(
+      new Uint8Array(
+        await (await fetch('/tests/fixtures/reader-smoke.pdf')).arrayBuffer()
+      )
+    )
+    state.folder.entries.push(
+      {
+        path: `${root}\\扫描讲义.pdf`,
+        name: '扫描讲义.pdf',
+        relativePath: '扫描讲义.pdf',
+        kind: 'pdf',
+        size: 60 * 1024 * 1024,
+        modifiedAt: 1000,
+        bytes,
+      },
+      {
+        path: `${root}\\超大讲义.pdf`,
+        name: '超大讲义.pdf',
+        relativePath: '超大讲义.pdf',
+        kind: 'pdf',
+        size: 251 * 1024 * 1024,
+        modifiedAt: 1000,
+      }
+    )
+    state.folder.oversized = 1
+    state.folder.unreadable = 2
+  }, root)
+  await page.getByRole('button', { name: '打开文件夹…' }).click()
+  await expect(page.getByRole('button', { name: /扫描讲义.pdf/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /超大讲义.pdf/ })).toBeVisible()
+  await expect(page.getByText(/2 个文件或子目录无法读取/)).toBeVisible()
+  await page.getByRole('button', { name: /超大讲义.pdf/ }).click()
+  await expect(page.getByRole('dialog')).toContainText(
+    '超大讲义.pdf：文件大小超过 250 MB'
+  )
+  await page.getByRole('button', { name: '知道了', exact: true }).click()
+  await page.getByRole('button', { name: /扫描讲义.pdf/ }).click()
+  await expect(page.locator('.pdf-viewport')).toBeVisible()
+  expect(await sources(page)).toContain(`${root}\\扫描讲义.pdf`)
+})
+
+test('批量导入重新扫描新增文件，并逐份保留失败文件名和原因', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: '打开文件夹…' }).click()
+  await page.evaluate(root => {
+    const state = (window as any).desktopTest
+    state.folder.entries.push(
+      {
+        path: `${root}\\新增.md`,
+        name: '新增.md',
+        relativePath: '新增.md',
+        kind: 'markdown',
+        size: 32,
+        modifiedAt: 1000,
+      },
+      {
+        path: `${root}\\打不开.pdf`,
+        name: '打不开.pdf',
+        relativePath: '打不开.pdf',
+        kind: 'pdf',
+        size: 32,
+        modifiedAt: 1000,
+        error: { message: '没有权限读取此文件' },
+      }
+    )
+  }, root)
+  await page.getByRole('button', { name: '全部导入', exact: true }).click()
+  await expect(page.getByRole('dialog')).toContainText(
+    '打不开.pdf：没有权限读取此文件'
+  )
+  await expect.poll(() => sources(page)).toContain(`${root}\\新增.md`)
+  await page.getByRole('button', { name: '知道了', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
 test('打开文件夹后按需载入单份文档，再一次性导入其余文档', async ({ page }) => {
   await page.getByRole('button', { name: '打开文件夹…' }).click()
   await expect(

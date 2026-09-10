@@ -1,5 +1,6 @@
 import { get, set } from 'idb-keyval'
 import type { DocumentRecord } from '@/types/document'
+import { fileSizeError } from '@/utils/file-limits'
 
 type ParsedDocument = Pick<DocumentRecord, 'content' | 'text'> &
   Partial<Pick<DocumentRecord, 'pages' | 'originalContent'>>
@@ -50,8 +51,8 @@ export const documentApi = {
           ? '旧版 .doc 需要先通过 Word 转存为 .docx，当前文档引擎支持 .docx。'
           : '支持 Markdown、PDF 和 DOCX 文档。'
       )
-    if (file.size > 50 * 1024 * 1024)
-      throw new Error('当前版本支持导入 50 MB 以内的文档。')
+    const sizeError = fileSizeError(file.name, file.size)
+    if (sizeError) throw new Error(sizeError)
     const parsed = await provider.read(file)
     const id = crypto.randomUUID()
     if (provider.binary) await set(`miraihub:asset:${id}`, file)

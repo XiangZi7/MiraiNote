@@ -49,10 +49,12 @@ export interface FolderScan {
   path: string
   name: string
   entries: FileEntry[]
-  /** 文档数量超出扫描上限，列表被截断。 */
+  /** 兼容旧扫描结果；当前扫描会遍历完整目录。 */
   truncated: boolean
-  /** 因超过单文件大小限制而跳过的数量。 */
+  /** 已列出但超过载入大小限制的文档数量。 */
   oversized: number
+  /** 无法读取的文件或子目录数量。 */
+  unreadable?: number
 }
 
 export interface MenuItem {

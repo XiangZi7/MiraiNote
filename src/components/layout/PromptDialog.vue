@@ -11,7 +11,7 @@ async function submit() {
   if (!prompt) return
   try {
     await prompt.action(value.value)
-    overlays.state.prompt = null
+    if (overlays.state.prompt === prompt) overlays.state.prompt = null
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '操作失败，请重试'
   }
@@ -29,8 +29,10 @@ async function submit() {
       @submit.prevent="submit"
     >
       <label class="text-secondary block text-xs leading-6"
-        >{{ overlays.state.prompt.label
-        }}<TextInput
+        ><span
+          class="block max-h-[50vh] overflow-auto break-words whitespace-pre-line"
+          >{{ overlays.state.prompt.label }}</span
+        ><TextInput
           v-if="overlays.state.prompt.input ?? !overlays.state.prompt.danger"
           v-model="value"
           class="mt-2"

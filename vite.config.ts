@@ -3,12 +3,13 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 import { offlineIcons } from './scripts/vite-icons.ts'
+import { pdfAssets } from './scripts/vite-pdf-assets.ts'
 
 const host = process.env.TAURI_DEV_HOST
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [vue(), tailwindcss(), offlineIcons()],
+  plugins: [vue(), tailwindcss(), offlineIcons(), pdfAssets()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

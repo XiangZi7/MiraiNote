@@ -41,7 +41,10 @@ export const useFoldersStore = defineStore('folders', () => {
   // 扫描结果只保留在内存中，避免把整棵目录写进 localStorage。
   const entries = ref<Record<string, FileEntry[]>>({})
   const notices = ref<
-    Record<string, { truncated: boolean; oversized: number }>
+    Record<
+      string,
+      { truncated: boolean; oversized: number; unreadable: number }
+    >
   >({})
   const scanning = shallowRef<string | null>(null)
 
@@ -53,6 +56,7 @@ export const useFoldersStore = defineStore('folders', () => {
     notices.value[scan.path] = {
       truncated: scan.truncated,
       oversized: scan.oversized,
+      unreadable: scan.unreadable ?? 0,
     }
     const openedAt = new Date().toISOString()
     const next = [

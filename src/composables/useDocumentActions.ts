@@ -34,10 +34,20 @@ interface ImportResult {
   imported: number
   skipped: number
   failed: number
+  failures: { name: string; message: string }[]
 }
 
 function reason(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback
+  if (error instanceof Error && error.message) return error.message
+  if (typeof error === 'string' && error) return error
+  if (
+    error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof error.message === 'string'
+  )
+    return error.message
+  return fallback
 }
 
 export const useDocumentActions = createSharedComposable(() => {
@@ -75,9 +85,27 @@ export const useDocumentActions = createSharedComposable(() => {
     if (result.failed) parts.push(`${result.failed} 份读取失败`)
     if (parts.length)
       overlays.toast(parts.join('，'), !result.imported && result.failed > 0)
+    if (result.failures.length) {
+      overlays.state.prompt = {
+        title: '文档导入失败详情',
+        label: result.failures
+          .map(item => `${item.name}：${item.message}`)
+          .join('\n'),
+        value: '',
+        confirm: '知道了',
+        danger: false,
+        input: false,
+        action: () => {},
+      }
+    }
   }
   async function runImport(items: ImportItem[], quiet: boolean) {
-    const result: ImportResult = { imported: 0, skipped: 0, failed: 0 }
+    const result: ImportResult = {
+      imported: 0,
+      skipped: 0,
+      failed: 0,
+      failures: [],
+    }
     const tabs = items.length <= BULK_TABS
     let focus: string | undefined
     try {
@@ -106,6 +134,10 @@ export const useDocumentActions = createSharedComposable(() => {
           if (tabs) workspace.open(doc.id)
         } catch (error) {
           result.failed++
+          result.failures.push({
+            name: item.display ?? item.path ?? item.name,
+            message: reason(error, '无法读取文件'),
+          })
           if (!quiet) overlays.toast(reason(error, '无法读取文件'), true)
         }
       }
@@ -220,8 +252,7 @@ export const useDocumentActions = createSharedComposable(() => {
       return
     }
     const folder = folders.get(path)
-    const entries =
-      folders.entries[path] ?? (await refreshFolder(path))?.entries
+    const entries = (await refreshFolder(path))?.entries
     if (!entries) return
     if (!entries.length) {
       overlays.toast('这个文件夹里没有可导入的文档')

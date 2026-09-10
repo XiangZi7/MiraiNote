@@ -12,6 +12,8 @@ import { useIntersectionObserver } from '@vueuse/core'
 import { TextLayer, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist'
 import '../styles/text-layer.css'
 import type { PdfPageSize } from '../types'
+import type { PdfSearchMatch } from '../services/search'
+import PdfSearchHighlights from './PdfSearchHighlights.vue'
 const props = withDefaults(
   defineProps<{
     pdf: PDFDocumentProxy
@@ -20,13 +22,18 @@ const props = withDefaults(
     rotation?: number
     thumbnail?: boolean
     size?: PdfPageSize
+    matches?: PdfSearchMatch[]
+    selectedMatch?: string
+    revealMatch?: string
   }>(),
-  { rotation: 0, thumbnail: false }
+  { rotation: 0, thumbnail: false, matches: () => [] }
 )
+const emit = defineEmits<{ revealed: [id: string] }>()
 const root = useTemplateRef('root'),
   canvas = useTemplateRef('canvas'),
   text = useTemplateRef('text')
 const visible = shallowRef(false)
+const renderedTextLayer = shallowRef<TextLayer>()
 // 响应式状态
 const state = reactive({
   // PDF 页面实际宽度
@@ -38,7 +45,7 @@ const state = reactive({
   // PDF 用户单位影响文本层的定位和字号
   unit: 1,
 })
-const { error } = toRefs(state)
+const { error, unit } = toRefs(state)
 const width = computed(
   () =>
     ((props.rotation % 180 ? props.size?.height : props.size?.width) ??
@@ -71,6 +78,7 @@ watch(
   ],
   async () => {
     const run = ++version
+    renderedTextLayer.value = undefined
     const previous = renderTask
     previous?.cancel()
     textLayer?.cancel()
@@ -111,12 +119,20 @@ watch(
       await renderTask.promise
       if (run !== version || props.thumbnail || !text.value) return
       text.value.replaceChildren()
+      const content = await page.getTextContent().catch(() => undefined)
+      // Text extraction is optional: keep a successfully rendered page visible.
+      if (run !== version || !text.value || !content) return
       textLayer = new TextLayer({
-        textContentSource: await page.getTextContent(),
+        textContentSource: content,
         container: text.value,
         viewport,
       })
-      await textLayer.render()
+      try {
+        await textLayer.render()
+        if (run === version) renderedTextLayer.value = textLayer
+      } catch {
+        if (run === version) text.value?.replaceChildren()
+      }
     } catch (reason) {
       if (
         run === version &&
@@ -146,7 +162,7 @@ onBeforeUnmount(() => {
       width: `${width}px`,
       height: `${height}px`,
       '--scale-factor': scale,
-      '--total-scale-factor': scale * state.unit,
+      '--total-scale-factor': scale * unit,
     }"
   >
     <canvas
@@ -157,6 +173,15 @@ onBeforeUnmount(() => {
       v-if="!thumbnail"
       ref="text"
       class="textLayer"
+    />
+    <PdfSearchHighlights
+      v-if="!thumbnail"
+      :layer="renderedTextLayer"
+      :root="root"
+      :matches="matches"
+      :selected="selectedMatch"
+      :reveal="revealMatch"
+      @revealed="emit('revealed', $event)"
     />
     <div
       v-if="error"

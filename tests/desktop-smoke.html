@@ -58,6 +58,8 @@
             item => item.path === payload.path
           )
           if (!entry) throw new Error('文件或文件夹不存在，可能已被移动')
+          if (entry.error) throw entry.error
+          if (entry.bytes) return new Uint8Array(entry.bytes)
           return new TextEncoder().encode(`# ${entry.name}\n\n正文。`)
         }
         if (command === 'agent_get_settings')

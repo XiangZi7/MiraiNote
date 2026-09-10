@@ -10,7 +10,6 @@ import {
   shallowRef,
   useTemplateRef,
   nextTick,
-  watch,
 } from 'vue'
 import type { PDFDocumentProxy, PDFDocumentLoadingTask } from 'pdfjs-dist'
 import { loadPdf } from '../services/pdf'
@@ -27,6 +26,8 @@ import type { PdfPageSize } from '../types'
 import { AppToolbar, ToolbarSeparator, IconButton } from '@/components/ui'
 import PdfCanvas from './PdfCanvas.vue'
 import type { DocumentRecord, DocumentTab } from '@/types/document'
+import { usePdfSearch } from '../composables/usePdfSearch'
+import type { PdfSearchMatch } from '../services/search'
 const props = defineProps<{ document: DocumentRecord; tab: DocumentTab }>()
 const workspace = useWorkspaceStore()
 const settings = useSettingsStore()
@@ -60,24 +61,36 @@ const state = reactive({
   error: '',
   // 左侧导航显示状态
   thumbnails: true,
-  // 搜索栏显示状态
-  searching: false,
-  // 查找关键字
-  query: '',
-  // 搜索进度
-  progress: '',
+  // 等待文字层完成后定位的搜索结果
+  revealMatch: '',
 })
-const { error, thumbnails, searching, query, progress } = toRefs(state)
+const { error, thumbnails, revealMatch } = toRefs(state)
+const search = usePdfSearch({
+  pdf: () => pdf.value,
+  page: () => props.tab.position.page,
+  reveal: match => {
+    void revealResult(match)
+  },
+})
+const { open: searching, query } = toRefs(search.state)
 let loading: PDFDocumentLoadingTask | undefined
 let disposed = false
-let searchRevision = 0
-watch(query, () => {
-  searchRevision++
-  state.progress = ''
-})
+let revealRevision = 0
+async function revealResult(match: PdfSearchMatch) {
+  const revision = ++revealRevision
+  state.revealMatch = ''
+  await viewport.value?.go(match.page)
+  if (
+    !disposed &&
+    revision === revealRevision &&
+    search.selected.value?.id === match.id
+  )
+    state.revealMatch = match.id
+}
 function closeSearch() {
-  searchRevision++
-  state.searching = false
+  revealRevision++
+  state.revealMatch = ''
+  search.state.open = false
 }
 function go(page: number) {
   const target = Math.max(
@@ -115,58 +128,28 @@ async function fit(whole = false) {
 }
 async function find() {
   if (workspace.library || workspace.activeTab?.id !== props.tab.id) return
-  state.searching = true
+  search.state.open = true
   await nextTick()
   searchBar.value?.focus()
-}
-async function search(direction: 1 | -1) {
-  if (!pdf.value || !state.query.trim()) return
-  const run = ++searchRevision
-  const current = pdf.value
-  const query = state.query.trim().toLowerCase()
-  const startPage = props.tab.position.page
-  try {
-    for (let offset = 1; offset <= current.numPages && !disposed; offset++) {
-      const number =
-        ((startPage - 1 + direction * offset + current.numPages) %
-          current.numPages) +
-        1
-      state.progress = `正在搜索 ${number} / ${current.numPages}`
-      const page = await current.getPage(number)
-      const content = await page.getTextContent()
-      if (disposed || run !== searchRevision) return
-      if (
-        content.items
-          .map(item => ('str' in item ? item.str : ''))
-          .join(' ')
-          .toLowerCase()
-          .includes(query)
-      ) {
-        go(number)
-        state.progress = `找到第 ${number} 页`
-        return
-      }
-    }
-    state.progress = '没有找到匹配内容'
-  } catch (reason) {
-    if (!disposed && run === searchRevision)
-      state.progress =
-        reason instanceof Error ? reason.message : '搜索失败，请重试'
-  }
 }
 onMounted(async () => {
   window.addEventListener('mirai:find', find)
   try {
     const blob = await documentApi.binary(props.document.assetId!)
     if (disposed) return
-    loading = loadPdf(await blob.arrayBuffer())
+    const data = await blob.arrayBuffer()
+    if (disposed) return
+    loading = loadPdf(data)
     const loaded = await loading.promise
     if (disposed) return
     const sizes: PdfPageSize[] = []
     for (let number = 1; number <= loaded.numPages; number++) {
-      const page = await loaded.getPage(number)
+      const page = await loaded.getPage(number).catch(() => undefined)
       if (disposed) return
-      const viewport = page.getViewport({ scale: 1 })
+      const viewport = page?.getViewport({ scale: 1 }) ?? {
+        width: 595,
+        height: 842,
+      }
       sizes.push({ width: viewport.width, height: viewport.height })
     }
     pageSizes.value = sizes
@@ -186,7 +169,8 @@ onMounted(async () => {
 })
 onActivated(() => window.addEventListener('mirai:find', find))
 onDeactivated(() => {
-  searchRevision++
+  revealRevision++
+  state.revealMatch = ''
   window.removeEventListener('mirai:find', find)
 })
 onBeforeUnmount(() => {
@@ -259,14 +243,16 @@ onBeforeUnmount(() => {
       v-if="searching"
       ref="searchBar"
       v-model:query="query"
-      :total="0"
-      :current="0"
-      :navigation-enabled="!!query.trim() && !!pdf"
-      :status-text="progress || (query.trim() ? 'Enter 查找' : '输入关键词')"
+      :total="search.matches.value.length"
+      :current="search.state.index + 1"
+      :navigation-enabled="
+        !search.state.busy && search.matches.value.length > 0
+      "
+      :status-text="search.status.value"
       :show-options="false"
       label="搜索 PDF 内容"
-      @next="search(1)"
-      @previous="search(-1)"
+      @next="search.move(1)"
+      @previous="search.move(-1)"
       @close="closeSearch"
     />
     <div
@@ -315,6 +301,10 @@ onBeforeUnmount(() => {
             :size="pageSizes[page - 1]"
             :scale="tab.position.zoom / 100"
             :rotation="tab.position.rotation"
+            :matches="search.byPage.value.get(page) ?? []"
+            :selected-match="search.selected.value?.id"
+            :reveal-match="revealMatch"
+            @revealed="revealMatch = ''"
           />
         </template>
       </PdfPagesViewport>

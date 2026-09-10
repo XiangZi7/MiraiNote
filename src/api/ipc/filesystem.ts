@@ -1,5 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import type { FileEntry, FolderScan } from '@/types/workspace'
+import { fileSizeError } from '@/utils/file-limits'
 
 // 桌面端读取真实路径；浏览器只能退回 <input type="file">。
 export const fileSystemApi = {
@@ -10,6 +11,8 @@ export const fileSystemApi = {
     invoke<FolderScan>('files_scan_folder', { path }),
   stat: (paths: string[]) => invoke<FileEntry[]>('files_stat', { paths }),
   async readFile(entry: FileEntry) {
+    const sizeError = fileSizeError(entry.name, entry.size)
+    if (sizeError) throw new Error(sizeError)
     const bytes = await invoke<ArrayBuffer>('files_read', { path: entry.path })
     return new File([bytes], entry.name, { lastModified: entry.modifiedAt })
   },

@@ -12,6 +12,7 @@ import {
   groupEntries,
 } from '@/utils/documents'
 import { AppIcon, AppButton, IconButton } from '@/components/ui'
+import { fileSizeError } from '@/utils/file-limits'
 defineOptions({ name: 'FolderLibraryPage' })
 const props = defineProps<{ folderPath: string }>()
 
@@ -39,7 +40,7 @@ const total = computed(() =>
   groups.value.reduce((count, group) => count + group.items.length, 0)
 )
 onActivated(() => {
-  if (!folders.entries[path.value] && folders.scanning !== path.value) void actions.refreshFolder(path.value)
+  if (folders.scanning !== path.value) void actions.refreshFolder(path.value)
 })
 </script>
 
@@ -109,13 +110,19 @@ onActivated(() => {
           </div>
         </div>
         <p
-          v-if="notice?.truncated || notice?.oversized"
+          v-if="notice?.truncated || notice?.oversized || notice?.unreadable"
           class="border-line text-muted mb-5 rounded-lg border border-dashed px-4 py-3 text-[11px]"
         >
           <template v-if="notice?.truncated"
-            >文件夹很大，这里只列出前 2000 份文档。</template
+            >扫描结果不完整，请重新扫描。</template
           ><template v-if="notice?.oversized"
-            >已跳过 {{ notice.oversized }} 份超过 50 MB 的文件。</template
+            >{{ notice.oversized }} 份文件超过载入限制，仍显示在列表中（PDF 250
+            MB，其他文档 50 MB）。</template
+          ><template v-if="notice?.unreadable"
+            >{{
+              notice.unreadable
+            }}
+            个文件或子目录无法读取，请检查权限后重新扫描。</template
           >
         </p>
         <template
@@ -148,9 +155,10 @@ onActivated(() => {
                   entry.name
                 }}</span
                 ><span class="text-muted mt-1 block truncate text-[11px]">{{
-                  opened.has(entry.path.toLowerCase())
+                  fileSizeError(entry.name, entry.size) ||
+                  (opened.has(entry.path.toLowerCase())
                     ? '已在工作区'
-                    : '点击载入到工作区'
+                    : '点击载入到工作区')
                 }}</span></span
               ></span
             >

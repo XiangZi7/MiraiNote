@@ -308,13 +308,14 @@ test('real PDF thumbnails and Word preview use their rendered documents', async 
   const pdfSearch = page.getByRole('textbox', { name: '搜索 PDF 内容' })
   await pdfSearch.fill('Searchable')
   await pdfSearch.press('Enter')
-  await expect(bar(page).getByRole('status')).toHaveText('找到第 2 页')
+  await expect(bar(page).getByRole('status')).toHaveText('1 / 1')
   await expect(page.getByRole('spinbutton', { name: 'PDF 页码' })).toHaveValue(
     '2'
   )
   await pdfSearch.fill('page')
+  await expect(bar(page).getByRole('status')).toHaveText('2 / 3')
   await pdfSearch.press('Shift+Enter')
-  await expect(bar(page).getByRole('status')).toHaveText('找到第 1 页')
+  await expect(bar(page).getByRole('status')).toHaveText('1 / 3')
   await pdfSearch.press('Escape')
   await expect(bar(page)).toHaveCount(0)
   await page.getByRole('button', { name: '跳转第 2 页', exact: true }).click()

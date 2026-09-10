@@ -191,13 +191,13 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', outside))
 <style scoped>
 .document-outline {
   position: absolute;
-  top: 12px;
+  top: calc(12px + var(--document-search-offset, 0px));
   right: 12px;
   z-index: var(--z-document-outline);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  max-height: calc(100% - 24px);
+  max-height: calc(100% - 24px - var(--document-search-offset, 0px));
   max-width: calc(100% - 24px);
 }
 .outline-toggle {

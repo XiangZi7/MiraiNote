@@ -10,11 +10,13 @@ import {
   shallowRef,
   useTemplateRef,
   nextTick,
+  watch,
 } from 'vue'
 import type { PDFDocumentProxy, PDFDocumentLoadingTask } from 'pdfjs-dist'
 import { loadPdf } from '../services/pdf'
 import { readPdfOutline, type PdfOutlineEntry } from '../services/outline'
 import DocumentOutline from '@/components/workspace/DocumentOutline.vue'
+import DocumentSearchBar from '@/components/search/DocumentSearchBar.vue'
 import { documentApi } from '@/api/ipc/document'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useSettingsStore } from '@/stores/settings'
@@ -22,12 +24,7 @@ import PdfPagesViewport from './PdfPagesViewport.vue'
 import PdfThumbnails from './PdfThumbnails.vue'
 import PdfNavigationPanel from './PdfNavigationPanel.vue'
 import type { PdfPageSize } from '../types'
-import {
-  AppToolbar,
-  ToolbarSeparator,
-  IconButton,
-  AppIcon,
-} from '@/components/ui'
+import { AppToolbar, ToolbarSeparator, IconButton } from '@/components/ui'
 import PdfCanvas from './PdfCanvas.vue'
 import type { DocumentRecord, DocumentTab } from '@/types/document'
 const props = defineProps<{ document: DocumentRecord; tab: DocumentTab }>()
@@ -56,7 +53,7 @@ const activeOutline = computed(() => {
   return active?.id ?? ''
 })
 const viewport = useTemplateRef('viewport'),
-  input = useTemplateRef('search')
+  searchBar = useTemplateRef('searchBar')
 // 响应式状态
 const state = reactive({
   // 文档加载异常
@@ -74,6 +71,14 @@ const { error, thumbnails, searching, query, progress } = toRefs(state)
 let loading: PDFDocumentLoadingTask | undefined
 let disposed = false
 let searchRevision = 0
+watch(query, () => {
+  searchRevision++
+  state.progress = ''
+})
+function closeSearch() {
+  searchRevision++
+  state.searching = false
+}
 function go(page: number) {
   const target = Math.max(
     1,
@@ -112,17 +117,20 @@ async function find() {
   if (workspace.library || workspace.activeTab?.id !== props.tab.id) return
   state.searching = true
   await nextTick()
-  input.value?.focus()
+  searchBar.value?.focus()
 }
-async function search() {
+async function search(direction: 1 | -1) {
   if (!pdf.value || !state.query.trim()) return
   const run = ++searchRevision
   const current = pdf.value
   const query = state.query.trim().toLowerCase()
+  const startPage = props.tab.position.page
   try {
     for (let offset = 1; offset <= current.numPages && !disposed; offset++) {
       const number =
-        ((props.tab.position.page - 1 + offset) % current.numPages) + 1
+        ((startPage - 1 + direction * offset + current.numPages) %
+          current.numPages) +
+        1
       state.progress = `正在搜索 ${number} / ${current.numPages}`
       const page = await current.getPage(number)
       const content = await page.getTextContent()
@@ -189,7 +197,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-canvas flex h-full flex-col">
+  <div
+    class="bg-canvas relative flex h-full flex-col"
+    :style="{
+      '--document-search-offset': searching
+        ? `${(searchBar?.height ?? 0) + 8}px`
+        : '0px',
+    }"
+  >
     <AppToolbar label="PDF 工具栏"
       ><IconButton
         icon="lucide:panel-left"
@@ -240,24 +255,20 @@ onBeforeUnmount(() => {
         label="搜索 PDF (Ctrl+F)"
         @click="find"
     /></AppToolbar>
-    <div
+    <DocumentSearchBar
       v-if="searching"
-      class="border-line flex items-center gap-3 border-b px-5 py-2"
-    >
-      <AppIcon name="lucide:search" /><input
-        ref="search"
-        v-model="query"
-        aria-label="搜索 PDF 内容"
-        placeholder="查找内容，按回车跳转…"
-        class="min-w-0 flex-1 border-0 bg-transparent text-xs outline-none"
-        @keydown.enter="search"
-      /><span class="text-muted text-[11px]">{{ progress }}</span
-      ><IconButton
-        icon="lucide:x"
-        label="关闭查找"
-        @click="searching = false"
-      />
-    </div>
+      ref="searchBar"
+      v-model:query="query"
+      :total="0"
+      :current="0"
+      :navigation-enabled="!!query.trim() && !!pdf"
+      :status-text="progress || (query.trim() ? 'Enter 查找' : '输入关键词')"
+      :show-options="false"
+      label="搜索 PDF 内容"
+      @next="search(1)"
+      @previous="search(-1)"
+      @close="closeSearch"
+    />
     <div
       v-if="error"
       role="alert"

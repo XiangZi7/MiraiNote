@@ -39,8 +39,13 @@ async function action(action: MarkdownAction) {
 
 <template>
   <div
-    class="markdown-view flex h-full flex-col"
-    :style="{ '--editor-font-size': `${settings.settings.editorFontSize}px` }"
+    class="markdown-view relative flex h-full flex-col"
+    :style="{
+      '--editor-font-size': `${settings.settings.editorFontSize}px`,
+      '--document-search-offset': search.state.open
+        ? `${(searchBar?.height ?? 0) + 8}px`
+        : '0px',
+    }"
   >
     <MarkdownToolbar
       :mode="tab.position.mode"

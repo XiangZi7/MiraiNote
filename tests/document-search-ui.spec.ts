@@ -51,9 +51,21 @@ test('preview search highlights visible text, wraps, respects options and clears
   page,
 }) => {
   const before = await page.locator('.markdown-preview article').innerHTML()
+  const viewport = page.locator('.markdown-preview')
+  const beforeBox = await viewport.boundingBox()
+  const articleBox = await viewport.locator('article').boundingBox()
   await expect(page.locator('.cm-editor')).toHaveCount(0)
   await page.keyboard.press('Control+f')
   await expect(input(page)).toBeFocused()
+  await expect(bar(page)).toHaveCSS('position', 'absolute')
+  expect(await viewport.boundingBox()).toEqual(beforeBox)
+  expect(await viewport.locator('article').boundingBox()).toEqual(articleBox)
+  const searchBox = (await bar(page).boundingBox())!
+  expect(searchBox.width).toBeLessThanOrEqual(440)
+  expect(searchBox.x + searchBox.width).toBeCloseTo(
+    beforeBox!.x + beforeBox!.width - 12,
+    0
+  )
   await input(page).fill('needle')
   await expect(bar(page).getByRole('status')).toHaveText('1 / 4')
   expect(
@@ -83,6 +95,7 @@ test('preview search highlights visible text, wraps, respects options and clears
   await expect(input(page)).toBeFocused()
   await input(page).press('Escape')
   await expect(bar(page)).toHaveCount(0)
+  expect(await viewport.boundingBox()).toEqual(beforeBox)
   expect(
     await page.evaluate(() => CSS.highlights.get('document-find')?.size)
   ).toBe(0)
@@ -121,13 +134,17 @@ test('one search UI survives mode switches and editor replacement remains undoab
     'Needle needle needles'
   )
   await page.getByRole('button', { name: '分屏', exact: true }).click()
+  const splitBox = await page.locator('.markdown-split').boundingBox()
   await page.keyboard.press('Control+f')
+  expect(await page.locator('.markdown-split').boundingBox()).toEqual(splitBox)
   await input(page).fill('needle')
   await expect(bar(page).getByRole('status')).toHaveText('1 / 4')
   await page.locator('.cm-content').focus()
   await page.keyboard.press('Control+End')
   await page.keyboard.type(' typing stays here', { delay: 20 })
-  await expect(page.locator('.cm-content')).toContainText('结尾。 typing stays here')
+  await expect(page.locator('.cm-content')).toContainText(
+    '结尾。 typing stays here'
+  )
 })
 
 test('outline and search stay within their pane and below global dialogs in both themes', async ({
@@ -225,6 +242,14 @@ test('PDF thumbnails float, resize and navigate without changing page geometry',
   expect(await viewport.locator('[data-pdf-page="1"]').boundingBox()).toEqual(
     pageBefore
   )
+  await page.keyboard.press('Control+f')
+  await expect(bar(page)).toHaveCSS('position', 'absolute')
+  expect(await viewport.boundingBox()).toEqual(before)
+  expect(await viewport.locator('[data-pdf-page="1"]').boundingBox()).toEqual(
+    pageBefore
+  )
+  await page.getByRole('textbox', { name: '搜索 PDF 内容' }).press('Escape')
+  await expect(bar(page)).toHaveCount(0)
   await page.getByRole('button', { name: '切换页面导航', exact: true }).click()
   const resize = page.getByRole('separator', {
     name: '调整 PDF 缩略图栏宽度',
@@ -277,6 +302,21 @@ test('real PDF thumbnails and Word preview use their rendered documents', async 
   await page
     .getByRole('button', { name: '切换 PDF 缩略图', exact: true })
     .click()
+  await page.keyboard.press('Control+f')
+  await expect(bar(page)).toHaveCSS('position', 'absolute')
+  expect(await viewport.boundingBox()).toEqual(before)
+  const pdfSearch = page.getByRole('textbox', { name: '搜索 PDF 内容' })
+  await pdfSearch.fill('Searchable')
+  await pdfSearch.press('Enter')
+  await expect(bar(page).getByRole('status')).toHaveText('找到第 2 页')
+  await expect(page.getByRole('spinbutton', { name: 'PDF 页码' })).toHaveValue(
+    '2'
+  )
+  await pdfSearch.fill('page')
+  await pdfSearch.press('Shift+Enter')
+  await expect(bar(page).getByRole('status')).toHaveText('找到第 1 页')
+  await pdfSearch.press('Escape')
+  await expect(bar(page)).toHaveCount(0)
   await page.getByRole('button', { name: '跳转第 2 页', exact: true }).click()
   await expect(page.getByRole('spinbutton', { name: 'PDF 页码' })).toHaveValue(
     '2'
@@ -285,7 +325,10 @@ test('real PDF thumbnails and Word preview use their rendered documents', async 
   await expect(page.getByLabel('Word 原始排版预览')).toContainText(
     'Word import verification'
   )
+  const wordBox = await page.locator('.word-viewport').boundingBox()
   await page.keyboard.press('Control+f')
+  await expect(bar(page)).toHaveCSS('position', 'absolute')
+  expect(await page.locator('.word-viewport').boundingBox()).toEqual(wordBox)
   await page.getByRole('textbox', { name: '搜索 Word 内容' }).fill('Word')
   await expect(bar(page).getByRole('status')).toHaveText('1 / 1')
   expect(

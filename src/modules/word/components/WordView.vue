@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { computed, useTemplateRef, onMounted, onActivated, onDeactivated, nextTick, watch } from 'vue'
+import {
+  computed,
+  useTemplateRef,
+  onMounted,
+  onActivated,
+  onDeactivated,
+  nextTick,
+  watch,
+} from 'vue'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import { TableKit } from '@tiptap/extension-table'
@@ -108,19 +116,26 @@ function restoreScroll() {
   search.refresh(false, true)
 }
 function scroll(event: Event) {
-  if (active) props.tab.position.scroll = (event.target as HTMLElement).scrollTop
+  if (active)
+    props.tab.position.scroll = (event.target as HTMLElement).scrollTop
 }
 onMounted(restoreScroll)
 onActivated(async () => {
   active = true
   await nextTick()
-  if (active && viewport.value) viewport.value.scrollTop = props.tab.position.scroll
+  if (active && viewport.value)
+    viewport.value.scrollTop = props.tab.position.scroll
 })
-onDeactivated(() => { active = false })
+onDeactivated(() => {
+  active = false
+})
 </script>
 
 <template>
-  <div class="word-view flex h-full flex-col">
+  <div
+    class="word-view relative flex h-full flex-col"
+    style="--document-search-top: 82px"
+  >
     <WordToolbar
       :editing="editing"
       :zoom="tab.position.zoom"

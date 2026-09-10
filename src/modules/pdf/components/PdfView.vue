@@ -14,7 +14,7 @@ import {
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useOverlaysStore } from '@/stores/overlays'
 import IconButton from '@/components/ui/IconButton.vue'
-import AppIcon from '@/components/ui/AppIcon.vue'
+import DocumentSearchBar from '@/components/search/DocumentSearchBar.vue'
 import PdfPage from './PdfPage.vue'
 import PdfFileView from './PdfFileView.vue'
 import PdfPagesViewport from './PdfPagesViewport.vue'
@@ -48,7 +48,7 @@ const state = reactive({
 const { navigation, searching, query } = toRefs(state)
 const root = useTemplateRef('root')
 const viewport = useTemplateRef('viewport')
-const searchInput = useTemplateRef('search')
+const searchBar = useTemplateRef('searchBar')
 const scale = computed(() => props.tab.position.zoom / 100)
 const matches = computed(() =>
   examplePages
@@ -91,10 +91,26 @@ function fit(page = false) {
     )
 }
 async function find() {
-  if (props.document.assetId || workspace.library || workspace.activeTab?.id !== props.tab.id) return
+  if (
+    props.document.assetId ||
+    workspace.library ||
+    workspace.activeTab?.id !== props.tab.id
+  )
+    return
   state.searching = true
   await nextTick()
-  searchInput.value?.focus()
+  searchBar.value?.focus()
+}
+function search(direction: 1 | -1) {
+  if (!state.query.trim()) return
+  const items = matches.value
+  const match =
+    direction === 1
+      ? (items.find(item => item.number > props.tab.position.page) ?? items[0])
+      : ([...items]
+          .reverse()
+          .find(item => item.number < props.tab.position.page) ?? items.at(-1))
+  if (match) go(match.number)
 }
 async function fullscreen() {
   try {
@@ -120,7 +136,12 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
   <div
     v-else
     ref="root"
-    class="pdf-view bg-canvas flex h-full flex-col"
+    class="pdf-view bg-canvas relative flex h-full flex-col"
+    :style="{
+      '--document-search-offset': searching
+        ? `${(searchBar?.height ?? 0) + 8}px`
+        : '0px',
+    }"
   >
     <AppToolbar label="PDF 工具栏">
       <IconButton
@@ -196,23 +217,19 @@ onBeforeUnmount(() => window.removeEventListener('mirai:find', find))
         @click="fullscreen"
       />
     </AppToolbar>
-    <div
+    <DocumentSearchBar
       v-if="searching"
-      class="pdf-search border-line [&>span]:text-muted flex items-center gap-2.5 border-b px-5 py-2 [&>input]:flex-1 [&>input]:border-0 [&>input]:bg-transparent [&>input]:outline-none [&>span]:text-[11px]"
-    >
-      <AppIcon name="lucide:search" /><input
-        ref="search"
-        v-model="query"
-        aria-label="搜索 PDF 内容"
-        placeholder="查找文档内容…"
-        @keydown.enter="matches[0] && go(matches[0].number)"
-      /><span>{{ query ? `${matches.length} 页匹配` : '输入关键词' }}</span
-      ><IconButton
-        icon="lucide:x"
-        label="关闭查找"
-        @click="searching = false"
-      />
-    </div>
+      ref="searchBar"
+      v-model:query="query"
+      :total="query.trim() ? matches.length : 0"
+      :current="0"
+      :status-text="query.trim() ? `${matches.length} 页匹配` : '输入关键词'"
+      :show-options="false"
+      label="搜索 PDF 内容"
+      @next="search(1)"
+      @previous="search(-1)"
+      @close="searching = false"
+    />
     <div class="pdf-body relative flex min-h-0 flex-1">
       <PdfNavigationPanel
         v-if="navigation !== 'hidden'"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, toRefs, useTemplateRef } from 'vue'
+import { useElementSize } from '@vueuse/core'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import IconButton from '@/components/ui/IconButton.vue'
 
@@ -12,8 +13,16 @@ const props = withDefaults(
     current: number
     replaceAllowed?: boolean
     label?: string
+    statusText?: string
+    showOptions?: boolean
+    navigationEnabled?: boolean
   }>(),
-  { label: '搜索文档内容', replaceAllowed: false }
+  {
+    label: '搜索文档内容',
+    replaceAllowed: false,
+    showOptions: true,
+    navigationEnabled: undefined,
+  }
 )
 const emit = defineEmits<{
   close: []
@@ -30,12 +39,21 @@ const state = reactive({
 })
 const { replacing, replacement } = toRefs(state)
 const input = useTemplateRef('input')
-const status = computed(() =>
-  !query.value
-    ? '输入关键词'
-    : props.total
-      ? `${props.current} / ${props.total}`
-      : '无匹配结果'
+const element = useTemplateRef('element')
+const { height } = useElementSize(
+  element,
+  { width: 0, height: 0 },
+  { box: 'border-box' }
+)
+const canNavigate = computed(() => props.navigationEnabled ?? props.total > 0)
+const status = computed(
+  () =>
+    props.statusText ??
+    (!query.value
+      ? '输入关键词'
+      : props.total
+        ? `${props.current} / ${props.total}`
+        : '无匹配结果')
 )
 function focus() {
   input.value?.focus()
@@ -49,16 +67,18 @@ function keydown(event: KeyboardEvent) {
     emit('close')
   } else if (event.key === 'Enter') {
     event.preventDefault()
+    if (!canNavigate.value) return
     if (event.shiftKey) emit('previous')
     else emit('next')
   }
 }
 onMounted(focus)
-defineExpose({ focus })
+defineExpose({ focus, height })
 </script>
 
 <template>
   <section
+    ref="element"
     class="document-search"
     role="search"
     aria-label="文内查找"
@@ -81,12 +101,13 @@ defineExpose({ focus })
         />
         <span
           class="search-count"
-          :class="{ 'search-empty': query && !total }"
+          :class="{ 'search-empty': query && !total && !statusText }"
           role="status"
           aria-live="polite"
           >{{ status }}</span
         >
         <button
+          v-if="showOptions"
           class="search-option"
           :class="{ selected: caseSensitive }"
           :aria-pressed="caseSensitive"
@@ -97,6 +118,7 @@ defineExpose({ focus })
           Aa
         </button>
         <button
+          v-if="showOptions"
           class="search-option"
           :class="{ selected: wholeWord }"
           :aria-pressed="wholeWord"
@@ -114,13 +136,13 @@ defineExpose({ focus })
         <IconButton
           icon="lucide:chevron-up"
           label="上一个匹配 (Shift+Enter)"
-          :disabled="!total"
+          :disabled="!canNavigate"
           @click="emit('previous')"
         />
         <IconButton
           icon="lucide:chevron-down"
           label="下一个匹配 (Enter)"
-          :disabled="!total"
+          :disabled="!canNavigate"
           @click="emit('next')"
         />
         <IconButton
@@ -175,18 +197,23 @@ defineExpose({ focus })
 
 <style scoped>
 .document-search {
-  position: relative;
+  position: absolute;
+  top: var(--document-search-top, 56px);
+  right: 12px;
   z-index: var(--z-document-search);
-  flex-shrink: 0;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
+  width: 440px;
+  max-width: calc(100% - 24px);
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: var(--surface);
+  box-shadow: var(--shadow);
   container-type: inline-size;
 }
 .search-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
 }
 .search-field {
@@ -252,6 +279,7 @@ defineExpose({ focus })
 }
 .search-actions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 3px;
 }
@@ -278,7 +306,7 @@ defineExpose({ focus })
 .replace-button:enabled:hover {
   background: var(--hover);
 }
-@container (max-width: 440px) {
+@container (max-width: 380px) {
   .search-row {
     flex-wrap: wrap;
     gap: 6px;
